@@ -46,3 +46,34 @@ def list_user_orders(user_id: str) -> list[dict]:
         out.append({"order_id": oid, "product": s["product"],
                     "status": s["status"], "amount": s["amount"]})
     return out
+
+
+DEMO_TRACKING_NOS = ("CNDE20260917001", "CNUS20260917002")
+
+
+def shipment_snapshot(tracking_no: str) -> dict:
+    """跨境运单 mock 快照：同一运单号每次返回稳定结果。"""
+    rng = random.Random(f"shipment:{tracking_no}")
+    status = rng.choice(["已揽收", "运输中", "清关中", "派送中", "已签收"])
+    city = rng.choice(["深圳", "广州", "法兰克福", "洛杉矶", "东京"])
+    return {
+        "tracking_no": tracking_no,
+        "status": status,
+        "current_node": city,
+        "carrier": rng.choice(["DHL", "FedEx", "UPS", "顺丰国际"]),
+        "last_update": "2026-09-17 10:30",
+        "estimated_delivery": f"2026-09-{rng.randint(20, 28):02d}",
+        "trace": [f"{city}处理中心：{status}", "等待下一运输节点更新"],
+    }
+
+
+def list_user_shipments(user_id: str) -> list[dict]:
+    """按用户稳定生成演示运单列表，供前端和 Agent 演示。"""
+    if not user_id:
+        return []
+    return [shipment_snapshot(no) for no in DEMO_TRACKING_NOS]
+
+
+def owns_shipment(user_id: str, tracking_no: str) -> bool:
+    return bool(user_id and tracking_no and any(
+        item["tracking_no"] == tracking_no for item in list_user_shipments(user_id)))

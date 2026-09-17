@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>喵喵优选 · 智能客服</title>
+  <title>跨境物流 · 智能运营助手</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'><rect x='2' y='2' width='4' height='4' fill='%232b2632'/><rect x='10' y='2' width='4' height='4' fill='%232b2632'/><rect x='2' y='4' width='12' height='9' fill='%232b2632'/><rect x='3' y='3' width='2' height='3' fill='%23ff9f57'/><rect x='11' y='3' width='2' height='3' fill='%23ff9f57'/><rect x='3' y='5' width='10' height='7' fill='%23ff9f57'/><rect x='5' y='7' width='1' height='2' fill='%232b2632'/><rect x='10' y='7' width='1' height='2' fill='%232b2632'/><rect x='7' y='9' width='2' height='1' fill='%23ff8095'/></svg>" />
   <style>
     :root {
@@ -458,8 +458,8 @@
     <header>
       <div class="avatar lg" data-cat></div>
       <div class="head-meta">
-        <span class="name">小喵 · 智能客服</span>
-        <span class="status"><span class="dot-online"></span>ONLINE · 喵喵优选</span>
+        <span class="name">运小助 · 智能运营助手</span>
+        <span class="status"><span class="dot-online"></span>ONLINE · 跨境物流</span>
       </div>
       <div class="spacer"></div>
       <button id="new-chat" type="button">＋ 新对话</button>
@@ -540,7 +540,7 @@
   <script>
     const SESSION_KEY = "mewhelp_session_id";      // 稳定用户标识,作 user_id
     const CONV_KEY = "mewhelp_conversation_id";     // 当前会话 id,由后端 done 帧回传
-    const SUGGESTIONS = ["退换货政策是怎样的?", "怎么查我的物流进度?", "猫粮怎么选?", "会员有什么权益?"];
+    const SUGGESTIONS = ["我的国际运单到哪了?", "清关中一般要多久?", "帮我估算到德国的运费", "包裹破损怎么理赔?"];
     const CAT_SVG =
       '<svg viewBox="0 0 16 16" shape-rendering="crispEdges">' +
       '<rect x="2" y="2" width="4" height="4" fill="#2b2632"/>' +
@@ -594,7 +594,7 @@
       wrap.innerHTML =
         '<div class="mascot">' + CAT_SVG + "</div>" +
         "<h1>你好,我是小喵</h1>" +
-        "<p>喵喵优选的智能客服,商品、订单、售后都能问我~</p>" +
+        "<p>跨境物流的运单、清关、费用和异常处理都可以问我~</p>" +
         '<div class="chips"></div>';
       const chips = wrap.querySelector(".chips");
       for (const s of SUGGESTIONS) {

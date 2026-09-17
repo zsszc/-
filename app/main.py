@@ -82,7 +82,7 @@ def _check_context_budget() -> None:
                      b.window, b.fixed, b.peak, budget.describe(b))
 
 
-app = FastAPI(title="智能客服平台", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="跨境物流智能运营助手", version="0.1.0", lifespan=lifespan)
 app.include_router(actions_router)
 app.include_router(chat_router)
 app.include_router(extract_router)
