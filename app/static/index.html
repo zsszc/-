@@ -449,6 +449,8 @@
     #dashboard-link:hover { background: var(--fur); }
     #exception-classify { margin-right: 8px; border: 3px solid var(--ink); background: var(--paper); color: var(--ink); padding: 0 10px; cursor: pointer; font-family: inherit; font-weight: 700; }
     #exception-classify:hover { background: var(--fur); }
+    #ticket-draft { margin-right: 8px; border: 3px solid var(--ink); background: var(--paper); color: var(--ink); padding: 0 10px; cursor: pointer; font-family: inherit; font-weight: 700; }
+    #ticket-draft:hover { background: var(--fur); }
     #shipment-query { margin-right: 8px; border: 3px solid var(--ink); background: var(--paper); color: var(--ink); padding: 0 10px; cursor: pointer; font-family: inherit; font-weight: 700; }
     #shipment-query:hover { background: var(--fur); }
     #exception-result { display: none; margin: 8px 0 0; padding: 9px 12px; border: 3px solid var(--ink); background: #fff; font-size: 11px; line-height: 1.6; }
@@ -480,6 +482,7 @@
         <textarea id="input" rows="1" placeholder="输入运单、清关或异常问题…(回车发送 / Shift+回车换行)"></textarea>
         <button id="shipment-query" type="button">运单查询</button>
         <button id="exception-classify" type="button">异常识别</button>
+        <button id="ticket-draft" type="button">生成工单草稿</button>
         <button id="send" type="button" aria-label="发送">
           <svg viewBox="0 0 16 16" shape-rendering="crispEdges" fill="currentColor">
             <rect x="2" y="7" width="8" height="2"/><rect x="8" y="5" width="2" height="2"/>
@@ -576,6 +579,7 @@
     const sendBtn = document.getElementById("send");
     const exceptionBtn = document.getElementById("exception-classify");
     const shipmentBtn = document.getElementById("shipment-query");
+    const ticketDraftBtn = document.getElementById("ticket-draft");
     const exceptionResult = document.getElementById("exception-result");
     const newChatBtn = document.getElementById("new-chat");
 
@@ -1314,6 +1318,19 @@
       } catch (e) { exceptionResult.textContent = e.message || "运单查询失败，请稍后重试。"; }
       exceptionResult.style.display = "block";
       shipmentBtn.disabled = false;
+    });
+    ticketDraftBtn.addEventListener("click", async () => {
+      const description = inputEl.value.trim();
+      if (!description) { exceptionResult.textContent = "请先填写需要人工跟进的物流问题。"; exceptionResult.style.display = "block"; return; }
+      ticketDraftBtn.disabled = true;
+      try {
+        const r = await fetch("/api/logistics/ticket-draft", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ description }) });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail || "草稿生成失败");
+        exceptionResult.innerHTML = `<strong>${data.title}</strong><br>分类：${data.category} · 级别：${data.severity}<br>需要准备：${data.required_materials}<br><em>状态：${data.requires_confirmation ? "等待人工确认" : "可提交"}</em>`;
+      } catch (e) { exceptionResult.textContent = e.message || "工单草稿生成失败，请稍后重试。"; }
+      exceptionResult.style.display = "block";
+      ticketDraftBtn.disabled = false;
     });
     inputEl.addEventListener("input", autoGrow);
     inputEl.addEventListener("keydown", (e) => {
