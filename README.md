@@ -1,13 +1,13 @@
 # 智能客服平台
 
-面向电商业务的智能客服系统，提供订单与物流查询、售后政策问答、退款流程、知识库管理、质量评估、运行观测和主题分类能力。
+面向跨境物流场景的智能运营助手，提供国际运单查询、清关政策问答、线路费用估算、异常处理、理赔指引、知识库管理、质量评估和运行观测能力。
 
 ## 功能概览
 
 - 基于 FastAPI 的聊天与管理接口，并提供浏览器聊天页面
-- 通过工具调用查询订单、商品、物流和售后信息
-- 支持 FAQ/政策/商品资料的切块、向量化、混合检索与重排
-- 支持退款确认、工单创建等需要用户确认的操作
+- 通过工具调用查询当前用户的国际运单和运输方案
+- 支持 FAQ/清关政策/异常手册/理赔规则的切块、向量化、混合检索与重排
+- 支持运费估算、异常工单创建等需要用户确认的操作
 - 支持低置信问题收集、人工复核和知识库回补
 - 支持 LangGraph 工作流、Langfuse 观测以及主题分类器训练/推理
 
@@ -25,7 +25,7 @@ FastAPI、LangGraph/LangChain、SQLAlchemy、MySQL、Milvus、MCP、Langfuse。
    cp .env.example .env
    ```
 
-   然后编辑 `/Users/zc/Desktop/MewHelp/python/.env`，填写 `CHAT_*`、`EMBED_API_KEY` 和 `RERANK_API_KEY`。如果使用其他模型服务，也请同步调整对应的 `*_BASE_URL` 和模型名。不要把真实密钥提交到 Git。
+   然后编辑 `/Users/zc/Desktop/MewHelp/python/.env`，填写 `CHAT_*`、`EMBED_API_KEY` 和 `RERANK_API_KEY`。如果使用本地 MySQL 8 默认认证且 asyncmy 连接异常，可将 `DATABASE_SSL=true` 开启本地加密连接。不要把真实密钥提交到 Git。
 
 2. 确保 Docker Desktop 已启动，然后启动 MySQL、Milvus 及应用：
 
@@ -54,7 +54,7 @@ make test
 - `EMBED_*`：知识库嵌入模型
 - `RERANK_*`：检索重排模型
 - `DATABASE_URL`：业务数据库连接串，可按需覆盖默认值
-- `MCP_*_URL`：物流和售后 MCP 服务地址
+- `MCP_*_URL`：物流及扩展业务 MCP 服务地址
 - `LANGFUSE_*`：可选的本地观测服务配置
 
 ## 目录结构
