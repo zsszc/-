@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import ssl
 
 
 class Settings(BaseSettings):
@@ -26,6 +27,7 @@ class Settings(BaseSettings):
                                       # 而不是混在 content 里的 <think>。关不掉思考链时靠它兜底
     token_budget: int = 2000
     database_url: str = "mysql+asyncmy://root:root@localhost:3306/mewhelp"
+    database_ssl: bool = False       # 本地 MySQL 开启加密连接时使用
     test_database_url: str = "mysql+asyncmy://root:root@localhost:3306/mewhelp_ch02_test"
     # ch03 知识库检索
     embed_model: str = "BAAI/bge-m3"          # 上游真实名(无网关别名可用)
