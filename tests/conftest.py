@@ -124,7 +124,9 @@ def client():
     """返回 FastAPI TestClient 用于 API 测试(包含轻量业务路由)。"""
     from app.api.actions import router as actions_router
     from app.api.logistics import router as logistics_router
+    from app.api.shipping import router as shipping_router
     test_app = FastAPI()
     test_app.include_router(actions_router)
     test_app.include_router(logistics_router)
+    test_app.include_router(shipping_router)
     return TestClient(test_app)

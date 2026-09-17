@@ -18,6 +18,7 @@ from app.api.feedback import router as feedback_router
 from app.api.jobs import router as jobs_router
 from app.api.kb import router as kb_router
 from app.api.logistics import router as logistics_router
+from app.api.shipping import router as shipping_router
 from app.api.observability import router as observability_router
 from app.api.rageval import router as rageval_router
 from app.api.review import router as review_router
@@ -95,6 +96,7 @@ app.include_router(topics_router)
 app.include_router(acceptance_router)
 app.include_router(kb_router)
 app.include_router(logistics_router)
+app.include_router(shipping_router)
 app.include_router(rageval_router)
 app.include_router(observability_router)
 app.include_router(admin_router)

@@ -55,6 +55,7 @@ make test
 - `RERANK_*`：检索重排模型
 - `DATABASE_URL`：业务数据库连接串，可按需覆盖默认值
 - `MCP_*_URL`：物流及扩展业务 MCP 服务地址
+- `DATABASE_SSL`：本地 MySQL 使用加密连接时设为 `true`
 - `LANGFUSE_*`：可选的本地观测服务配置
 
 ## 目录结构
