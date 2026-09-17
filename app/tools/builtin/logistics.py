@@ -19,6 +19,29 @@ async def query_shipment(
 
 
 @tool
+async def assess_shipment_sla(
+    tracking_no: Annotated[str, Field(description="国际运单号，例如 CNDE20260917001")],
+    user_id: Annotated[str, InjectedToolArg],
+) -> dict:
+    """基于演示运单状态评估 SLA，结果仅用于本地运营演示。"""
+    snapshot = await query_shipment.ainvoke({"tracking_no": tracking_no, "user_id": user_id})
+    if snapshot.get("code") == "shipment_not_owned":
+        return snapshot
+    state = snapshot["status"]
+    states = {
+        "已揽收": ("待发运", "等待始发地交运"),
+        "运输中": ("观察中", "关注下一国际运输节点"),
+        "清关中": ("观察中", "核对海关通知并准备补充资料"),
+        "派送中": ("临近完成", "保持收件电话畅通"),
+        "已签收": ("已完成", "如有破损或少件请及时保留凭证"),
+    }
+    sla_status, next_action = states.get(state, ("待确认", "联系人工核对运单状态"))
+    return {"tracking_no": tracking_no, "carrier": snapshot["carrier"], "status": state,
+            "standard_days": 10, "sla_status": sla_status, "next_action": next_action,
+            "scope": "local-demo"}
+
+
+@tool
 async def estimate_shipping_fee(
     origin: Annotated[str, Field(description="始发地国家或城市")],
     destination: Annotated[str, Field(description="目的地国家或城市")],
@@ -70,6 +93,7 @@ async def check_prohibited_item(
 
 
 registry.register(registry.spec_from_langchain_tool(query_shipment, source="builtin", inject_user_id=True))
+registry.register(registry.spec_from_langchain_tool(assess_shipment_sla, source="builtin", inject_user_id=True))
 registry.register(registry.spec_from_langchain_tool(estimate_shipping_fee, source="builtin"))
 registry.register(registry.spec_from_langchain_tool(classify_logistics_exception, source="builtin"))
 registry.register(registry.spec_from_langchain_tool(check_prohibited_item, source="builtin"))
