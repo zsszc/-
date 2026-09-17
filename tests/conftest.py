@@ -128,6 +128,7 @@ def client():
     from app.api.shipment import router as shipment_router
     from app.api.prohibited import router as prohibited_router
     from app.api.ticket_draft import router as ticket_draft_router
+    from app.api.logistics_overview import router as logistics_overview_router
     test_app = FastAPI()
     test_app.include_router(actions_router)
     test_app.include_router(logistics_router)
@@ -135,4 +136,5 @@ def client():
     test_app.include_router(shipment_router)
     test_app.include_router(prohibited_router)
     test_app.include_router(ticket_draft_router)
+    test_app.include_router(logistics_overview_router)
     return TestClient(test_app)

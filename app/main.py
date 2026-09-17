@@ -22,6 +22,7 @@ from app.api.shipping import router as shipping_router
 from app.api.shipment import router as shipment_router
 from app.api.prohibited import router as prohibited_router
 from app.api.ticket_draft import router as ticket_draft_router
+from app.api.logistics_overview import router as logistics_overview_router
 from app.api.observability import router as observability_router
 from app.api.rageval import router as rageval_router
 from app.api.review import router as review_router
@@ -103,6 +104,7 @@ app.include_router(shipping_router)
 app.include_router(shipment_router)
 app.include_router(prohibited_router)
 app.include_router(ticket_draft_router)
+app.include_router(logistics_overview_router)
 app.include_router(rageval_router)
 app.include_router(observability_router)
 app.include_router(admin_router)
@@ -122,6 +124,11 @@ async def admin_page() -> FileResponse:
     """后台管理首页:知识库、RAG 评估、飞轮待审、观测与成本、主题分布、分类器验收各一张卡,一处进出。
     各模块页面还是各自原本的路径,首页只把入口收到一起,文档里贴过的链接照样能用。"""
     return FileResponse(_STATIC_DIR / "admin.html")
+
+
+@app.get("/logistics-dashboard", include_in_schema=False)
+async def logistics_dashboard_page() -> FileResponse:
+    return FileResponse(_STATIC_DIR / "logistics-dashboard.html")
 
 
 @app.get("/kb", include_in_schema=False)
