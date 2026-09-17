@@ -408,6 +408,7 @@
     footer { padding: 14px 16px 16px; border-top: 4px solid var(--ink); background: var(--cream); }
     .composer {
       display: flex;
+      flex-wrap: wrap;
       align-items: flex-end;
       gap: 10px;
       background: var(--paper);
@@ -416,7 +417,7 @@
       box-shadow: var(--shadow);
     }
     #input {
-      flex: 1;
+      flex: 1 1 260px;
       resize: none;
       border: none;
       background: transparent;
@@ -453,6 +454,11 @@
     #ticket-draft:hover { background: var(--fur); }
     #shipment-query { margin-right: 8px; border: 3px solid var(--ink); background: var(--paper); color: var(--ink); padding: 0 10px; cursor: pointer; font-family: inherit; font-weight: 700; }
     #shipment-query:hover { background: var(--fur); }
+    @media (max-width: 600px) {
+      .composer { align-items: stretch; }
+      #input { flex-basis: 100%; min-height: 44px; }
+      #shipment-query, #exception-classify, #ticket-draft, #send { min-height: 42px; }
+    }
     #exception-result { display: none; margin: 8px 0 0; padding: 9px 12px; border: 3px solid var(--ink); background: #fff; font-size: 11px; line-height: 1.6; }
     .foot-note { text-align: center; color: var(--muted); font-size: 11px; margin: 10px 0 0; letter-spacing: .3px; }
   </style>
@@ -471,7 +477,7 @@
         <span class="status"><span class="dot-online"></span>ONLINE · GLOBAL LOGISTICS</span>
       </div>
       <div class="spacer"></div>
-      <a id="dashboard-link" href="/logistics-dashboard">运营概览</a>
+      <a id="dashboard-link" href="/logistics-dashboard" aria-label="打开物流运营概览">运营概览</a>
       <button id="new-chat" type="button">＋ 新对话</button>
     </header>
 
@@ -480,9 +486,9 @@
     <footer>
       <div class="composer">
         <textarea id="input" rows="1" placeholder="输入运单、清关或异常问题…(回车发送 / Shift+回车换行)"></textarea>
-        <button id="shipment-query" type="button">运单查询</button>
-        <button id="exception-classify" type="button">异常识别</button>
-        <button id="ticket-draft" type="button">生成工单草稿</button>
+        <button id="shipment-query" type="button" aria-label="查询国际运单">运单查询</button>
+        <button id="exception-classify" type="button" aria-label="识别物流异常">异常识别</button>
+        <button id="ticket-draft" type="button" aria-label="生成物流工单草稿">生成工单草稿</button>
         <button id="send" type="button" aria-label="发送">
           <svg viewBox="0 0 16 16" shape-rendering="crispEdges" fill="currentColor">
             <rect x="2" y="7" width="8" height="2"/><rect x="8" y="5" width="2" height="2"/>
