@@ -445,6 +445,9 @@
     #send:active:not(:disabled) { transform: translate(3px, 3px); box-shadow: none; }
     #send:disabled { background: #d8cbc0; cursor: not-allowed; box-shadow: none; }
     #send svg { width: 22px; height: 22px; display: block; }
+    #exception-classify { margin-right: 8px; border: 3px solid var(--ink); background: var(--paper); color: var(--ink); padding: 0 10px; cursor: pointer; font-family: inherit; font-weight: 700; }
+    #exception-classify:hover { background: var(--fur); }
+    #exception-result { display: none; margin: 8px 0 0; padding: 9px 12px; border: 3px solid var(--ink); background: #fff; font-size: 11px; line-height: 1.6; }
     .foot-note { text-align: center; color: var(--muted); font-size: 11px; margin: 10px 0 0; letter-spacing: .3px; }
   </style>
 </head>
@@ -470,6 +473,7 @@
     <footer>
       <div class="composer">
         <textarea id="input" rows="1" placeholder="输入消息,和小喵聊聊吧~(回车发送 / Shift+回车换行)"></textarea>
+        <button id="exception-classify" type="button">异常识别</button>
         <button id="send" type="button" aria-label="发送">
           <svg viewBox="0 0 16 16" shape-rendering="crispEdges" fill="currentColor">
             <rect x="2" y="7" width="8" height="2"/><rect x="8" y="5" width="2" height="2"/>
@@ -479,6 +483,7 @@
           </svg>
         </button>
       </div>
+      <div id="exception-result"></div>
       <p class="foot-note">小喵是 AI 助手,涉及具体订单会为你转接人工核实</p>
     </footer>
     </div><!-- /.main -->
@@ -563,6 +568,8 @@
     const messagesEl = document.getElementById("messages");
     const inputEl = document.getElementById("input");
     const sendBtn = document.getElementById("send");
+    const exceptionBtn = document.getElementById("exception-classify");
+    const exceptionResult = document.getElementById("exception-result");
     const newChatBtn = document.getElementById("new-chat");
 
     for (const el of document.querySelectorAll("[data-cat]")) el.innerHTML = CAT_SVG;
@@ -1275,6 +1282,19 @@
     }
 
     sendBtn.addEventListener("click", () => send());
+    exceptionBtn.addEventListener("click", async () => {
+      const description = inputEl.value.trim();
+      if (!description) { exceptionResult.textContent = "请先在输入框填写物流异常描述。"; exceptionResult.style.display = "block"; return; }
+      exceptionBtn.disabled = true;
+      try {
+        const r = await fetch("/api/logistics/exception-classify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ description }) });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail || "识别失败");
+        exceptionResult.innerHTML = `<strong>${data.category}</strong> · 严重级别：${data.severity}<br>建议准备：${data.required_materials}`;
+      } catch (e) { exceptionResult.textContent = "异常识别失败，请稍后重试。"; }
+      exceptionResult.style.display = "block";
+      exceptionBtn.disabled = false;
+    });
     inputEl.addEventListener("input", autoGrow);
     inputEl.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
