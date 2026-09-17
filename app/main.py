@@ -21,6 +21,7 @@ from app.api.logistics import router as logistics_router
 from app.api.shipping import router as shipping_router
 from app.api.shipment import router as shipment_router
 from app.api.prohibited import router as prohibited_router
+from app.api.ticket_draft import router as ticket_draft_router
 from app.api.observability import router as observability_router
 from app.api.rageval import router as rageval_router
 from app.api.review import router as review_router
@@ -101,6 +102,7 @@ app.include_router(logistics_router)
 app.include_router(shipping_router)
 app.include_router(shipment_router)
 app.include_router(prohibited_router)
+app.include_router(ticket_draft_router)
 app.include_router(rageval_router)
 app.include_router(observability_router)
 app.include_router(admin_router)
