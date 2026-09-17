@@ -39,10 +39,11 @@ FastAPI、LangGraph/LangChain、SQLAlchemy、MySQL、Milvus、MCP、Langfuse。
 
 ## 物流场景演示
 
-1. 询问“德国清关需要准备什么资料”，观察知识库引用。
+1. 在聊天页询问“德国清关需要准备什么资料”，观察知识库引用。
 2. 在输入框填写 `CNDE20260917001`，点击“运单查询”。
 3. 输入“锂电池”，点击“异常识别”查看预检结果。
-4. 执行交付验收：`./.venv/bin/python scripts/verify_logistics_release.py --live`。
+4. 点击顶部“运营概览”查看项目能力和本地组件状态。
+5. 执行交付验收：`./.venv/bin/python scripts/verify_logistics_release.py --live`。
 
 如果只想先验证代码结构，可以运行：
 

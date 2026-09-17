@@ -445,6 +445,8 @@
     #send:active:not(:disabled) { transform: translate(3px, 3px); box-shadow: none; }
     #send:disabled { background: #d8cbc0; cursor: not-allowed; box-shadow: none; }
     #send svg { width: 22px; height: 22px; display: block; }
+    #dashboard-link { color: var(--ink); border: 2px solid var(--ink); padding: 6px 8px; margin-right: 10px; text-decoration: none; font-size: 11px; font-weight: 700; }
+    #dashboard-link:hover { background: var(--fur); }
     #exception-classify { margin-right: 8px; border: 3px solid var(--ink); background: var(--paper); color: var(--ink); padding: 0 10px; cursor: pointer; font-family: inherit; font-weight: 700; }
     #exception-classify:hover { background: var(--fur); }
     #shipment-query { margin-right: 8px; border: 3px solid var(--ink); background: var(--paper); color: var(--ink); padding: 0 10px; cursor: pointer; font-family: inherit; font-weight: 700; }
@@ -467,6 +469,7 @@
         <span class="status"><span class="dot-online"></span>ONLINE · GLOBAL LOGISTICS</span>
       </div>
       <div class="spacer"></div>
+      <a id="dashboard-link" href="/logistics-dashboard">运营概览</a>
       <button id="new-chat" type="button">＋ 新对话</button>
     </header>
 
