@@ -1,7 +1,9 @@
 import pytest
 
 from app.tools.business import owns_shipment, shipment_snapshot
-from app.tools.builtin.logistics import estimate_shipping_fee, query_shipment
+from app.tools.builtin.logistics import (
+    classify_logistics_exception, estimate_shipping_fee, query_shipment,
+)
 
 
 def test_shipment_snapshot_is_stable_and_has_operational_fields():
@@ -30,3 +32,10 @@ async def test_estimate_shipping_fee_is_explainable():
     })
     assert result["estimated_fee_cny"] == 151
     assert "最终报价" in result["notice"]
+
+
+@pytest.mark.asyncio
+async def test_classify_logistics_exception_returns_next_materials():
+    result = await classify_logistics_exception.ainvoke({"description": "包裹在清关，海关要求补资料"})
+    assert result["category"] == "清关补料"
+    assert "收件人信息" in result["required_materials"]
