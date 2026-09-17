@@ -1,0 +1,12 @@
+{"id":"lg-001","query":"请查一下运单 CNDE20260917001 到哪里了","intent":"运单查询","topic":"运单查询","expected_capability":"shipment_query"}
+{"id":"lg-002","query":"德国清关需要准备哪些资料","intent":"清关咨询","topic":"清关资料","expected_capability":"rag"}
+{"id":"lg-003","query":"进口税一般由谁承担","intent":"清关咨询","topic":"关税税费","expected_capability":"rag"}
+{"id":"lg-004","query":"深圳到德国 2kg 标准线路大概多少钱","intent":"费用时效","topic":"运输费用","expected_capability":"shipping_fee"}
+{"id":"lg-005","query":"包裹三天没有物流更新怎么办","intent":"异常处理","topic":"异常处理","expected_capability":"exception_classify"}
+{"id":"lg-006","query":"外包装破损，申请理赔需要什么材料","intent":"理赔","topic":"包裹破损","expected_capability":"rag"}
+{"id":"lg-007","query":"锂电池可以寄到美国吗","intent":"禁限寄","topic":"禁限寄","expected_capability":"prohibited_check"}
+{"id":"lg-008","query":"汽油能不能走国际快递","intent":"禁限寄","topic":"禁限寄","expected_capability":"prohibited_check"}
+{"id":"lg-009","query":"收件地址写错了还能修改吗","intent":"异常处理","topic":"地址修改","expected_capability":"rag"}
+{"id":"lg-010","query":"包裹被退回始发地怎么处理","intent":"异常处理","topic":"退运处理","expected_capability":"rag"}
+{"id":"lg-011","query":"帮我比较经济和特快线路","intent":"费用时效","topic":"线路选择","expected_capability":"shipping_fee"}
+{"id":"lg-012","query":"清关卡住了，帮我转人工跟进","intent":"人工","topic":"异常处理","expected_capability":"exception_classify"}
