@@ -10,3 +10,21 @@
 {"id":"lg-010","query":"包裹被退回始发地怎么处理","intent":"异常处理","topic":"退运处理","expected_capability":"rag"}
 {"id":"lg-011","query":"帮我比较经济和特快线路","intent":"费用时效","topic":"线路选择","expected_capability":"shipping_fee"}
 {"id":"lg-012","query":"清关卡住了，帮我转人工跟进","intent":"人工","topic":"异常处理","expected_capability":"exception_classify"}
+{"id":"lg-013","query":"运单 CNUS20260917002 显示已签收但我没收到","intent":"异常处理","topic":"派送问题","expected_capability":"shipment_query"}
+{"id":"lg-014","query":"日本线路现在走经济还是特快比较合适","intent":"费用时效","topic":"线路选择","expected_capability":"shipping_fee"}
+{"id":"lg-015","query":"从广州寄到法国的体积重量怎么算","intent":"费用时效","topic":"运输费用","expected_capability":"rag"}
+{"id":"lg-016","query":"海关通知补交商业发票怎么办","intent":"清关咨询","topic":"贸易单证","expected_capability":"rag"}
+{"id":"lg-017","query":"包裹一直显示航班延误","intent":"异常处理","topic":"运输时效","expected_capability":"exception_classify"}
+{"id":"lg-018","query":"收件人电话填错了还能改吗","intent":"异常处理","topic":"地址修改","expected_capability":"rag"}
+{"id":"lg-019","query":"化妆品液体可以寄到德国吗","intent":"禁限寄","topic":"禁限寄","expected_capability":"prohibited_check"}
+{"id":"lg-020","query":"我想寄普通棉衣到英国","intent":"禁限寄","topic":"禁限寄","expected_capability":"prohibited_check"}
+{"id":"lg-021","query":"包裹少了一件，理赔要什么凭证","intent":"理赔","topic":"包裹破损","expected_capability":"rag"}
+{"id":"lg-022","query":"国际包裹确认丢失后怎么赔","intent":"理赔","topic":"丢失理赔","expected_capability":"rag"}
+{"id":"lg-023","query":"清关失败被退回，退运费用怎么算","intent":"异常处理","topic":"退运处理","expected_capability":"rag"}
+{"id":"lg-024","query":"DHL 和 UPS 的轨迹更新有什么区别","intent":"费用时效","topic":"承运商服务","expected_capability":"rag"}
+{"id":"lg-025","query":"到美国的进口税是寄件人付还是收件人付","intent":"清关咨询","topic":"关税税费","expected_capability":"rag"}
+{"id":"lg-026","query":"我的国际件三天没更新了，帮我判断是否延误","intent":"异常处理","topic":"异常处理","expected_capability":"shipment_query"}
+{"id":"lg-027","query":"帮我看一下 CNDE20260917001 是否接近 SLA","intent":"运单查询","topic":"运输时效","expected_capability":"shipment_query"}
+{"id":"lg-028","query":"想寄带磁铁的设备，需要提前确认吗","intent":"禁限寄","topic":"禁限寄","expected_capability":"prohibited_check"}
+{"id":"lg-029","query":"我的货在目的国清关中，下一步该做什么","intent":"清关咨询","topic":"清关资料","expected_capability":"exception_classify"}
+{"id":"lg-030","query":"请估算上海到东京 0.8kg 特快运费","intent":"费用时效","topic":"运输费用","expected_capability":"shipping_fee"}
