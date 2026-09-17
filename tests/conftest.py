@@ -125,8 +125,10 @@ def client():
     from app.api.actions import router as actions_router
     from app.api.logistics import router as logistics_router
     from app.api.shipping import router as shipping_router
+    from app.api.shipment import router as shipment_router
     test_app = FastAPI()
     test_app.include_router(actions_router)
     test_app.include_router(logistics_router)
     test_app.include_router(shipping_router)
+    test_app.include_router(shipment_router)
     return TestClient(test_app)
