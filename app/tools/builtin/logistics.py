@@ -56,6 +56,20 @@ async def classify_logistics_exception(
     return {"category": "其他异常", "severity": "low", "required_materials": "运单号和完整异常描述"}
 
 
+@tool
+async def check_prohibited_item(
+    item_name: Annotated[str, Field(description="准备寄运的物品名称")],
+) -> dict:
+    """寄件前预检物品风险，最终以承运商和目的国规则为准。"""
+    text = item_name.lower()
+    if any(word in text for word in ("炸药", "枪", "毒品", "放射性", "汽油", "烟花")):
+        return {"decision": "prohibited", "reason": "属于常见明确禁寄高风险物品", "declaration_hint": "不得寄运，请勿虚假申报"}
+    if any(word in text for word in ("电池", "液体", "粉末", "食品", "药品", "磁铁", "动植物")):
+        return {"decision": "requires_review", "reason": "可能受承运商或目的国限制", "declaration_hint": "提供真实品名、数量、用途和包装信息，寄运前确认线路"}
+    return {"decision": "可咨询寄运", "reason": "未命中常见禁限寄关键词", "declaration_hint": "仍需如实填写品名、数量和价值，并以承运商最终审核为准"}
+
+
 registry.register(registry.spec_from_langchain_tool(query_shipment, source="builtin", inject_user_id=True))
 registry.register(registry.spec_from_langchain_tool(estimate_shipping_fee, source="builtin"))
 registry.register(registry.spec_from_langchain_tool(classify_logistics_exception, source="builtin"))
+registry.register(registry.spec_from_langchain_tool(check_prohibited_item, source="builtin"))
