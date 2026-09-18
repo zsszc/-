@@ -2,6 +2,7 @@
 运行:make ch10-train。设备自适应 cuda→mps→cpu(Trainer 自动挑);正则化 weight_decay + 早停盯验证集 micro-F1。
 HF 下载不通时:HF_ENDPOINT=https://hf-mirror.com make ch10-train。"""
 import json
+import argparse
 import pathlib
 
 import numpy as np
@@ -61,13 +62,15 @@ class BestInMemory(TrainerCallback):
                                for k, v in self.model.state_dict().items()}
 
 
-def main() -> None:
+def main(data_dir: pathlib.Path = DATA, output_dir: pathlib.Path = OUT) -> None:
+    train_path = data_dir / ("train.jsonl" if (data_dir / "train.jsonl").exists() else "logistics_train.jsonl")
+    val_path = data_dir / ("val.jsonl" if (data_dir / "val.jsonl").exists() else "logistics_val.jsonl")
     tokenizer = AutoTokenizer.from_pretrained(BASE)
     model = AutoModelForSequenceClassification.from_pretrained(
         BASE, num_labels=NUM_CLASSES, problem_type="multi_label_classification",
         id2label=ID2LABEL, label2id=LABEL2ID)
-    train_ds = encode(load_jsonl(DATA / "train.jsonl"), tokenizer)
-    val_ds = encode(load_jsonl(DATA / "val.jsonl"), tokenizer)
+    train_ds = encode(load_jsonl(train_path), tokenizer)
+    val_ds = encode(load_jsonl(val_path), tokenizer)
     args = TrainingArguments(
         output_dir="data/ch10/checkpoints",       # 只放训练日志,save_strategy=no 不写权重
         eval_strategy="epoch",                    # v5 参数名,不是 evaluation_strategy
@@ -104,13 +107,18 @@ def main() -> None:
         f1 = f1_score(gold, (probs >= t).astype(int), average="micro", zero_division=0)
         if f1 > best_f1:
             best_t, best_f1 = round(float(t), 2), float(f1)
-    OUT.mkdir(parents=True, exist_ok=True)
-    trainer.save_model(OUT)
-    tokenizer.save_pretrained(OUT)
-    (OUT / "threshold.json").write_text(
+    output_dir.mkdir(parents=True, exist_ok=True)
+    trainer.save_model(output_dir)
+    tokenizer.save_pretrained(output_dir)
+    (output_dir / "threshold.json").write_text(
         json.dumps({"threshold": best_t, "val_micro_f1": best_f1}))
-    print(f"最优阈值 {best_t},验证集 micro-F1 {best_f1:.4f};模型已存 {OUT}")
+    print(f"最优阈值 {best_t},验证集 micro-F1 {best_f1:.4f};模型已存 {output_dir}")
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data-dir", type=pathlib.Path, default=DATA,
+                        help="包含 train.jsonl 和 val.jsonl 的数据目录")
+    parser.add_argument("--output-dir", type=pathlib.Path, default=OUT)
+    args = parser.parse_args()
+    main(args.data_dir, args.output_dir)
