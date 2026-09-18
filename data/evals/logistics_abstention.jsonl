@@ -1,0 +1,8 @@
+{"query":"明天深圳飞法兰克福的航班会不会取消","must_abstain":true,"reason":"不掌握实时航班信息"}
+{"query":"DHL 今天德国线路的内部爆仓阈值是多少","must_abstain":true,"reason":"未收录承运商内部运营规则"}
+{"query":"我的包裹在海关会被收多少欧元税","must_abstain":true,"reason":"缺少商品和海关实时税则信息"}
+{"query":"UPS 今年最新的偏远地区附加费表","must_abstain":true,"reason":"需要实时承运商价目表"}
+{"query":"某个没有提供名称的仓库能否代收我的包裹","must_abstain":true,"reason":"缺少仓库身份和服务协议"}
+{"query":"德国海关今天是否临时增加查验比例","must_abstain":true,"reason":"需要实时海关公告"}
+{"query":"我的包裹具体会由哪位快递员几点送达","must_abstain":true,"reason":"不掌握末端派送实时排班"}
+{"query":"某商品在巴西当前最新的进口许可证要求","must_abstain":true,"reason":"超出当前知识库国家和政策范围"}

@@ -30,6 +30,10 @@ def main() -> None:
     cases = [json.loads(line) for line in (ROOT / "data/evals/logistics_regression.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
     if len(cases) < 12:
         fail("回归样例少于 12 条")
+    abstention_path = ROOT / "data/evals/logistics_abstention.jsonl"
+    abstention_cases = [json.loads(line) for line in abstention_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    if len(abstention_cases) < 8 or not all(case.get("must_abstain") for case in abstention_cases):
+        fail("库外拒答评测集不完整")
     from app.core.taxonomy import TOPIC_NAMES
     from app.tools.registry import builtin_specs
     required = {"query_shipment", "estimate_shipping_fee", "classify_logistics_exception", "check_prohibited_item"}
@@ -52,7 +56,7 @@ def main() -> None:
                         fail(f"接口 {path} 返回 {response.status}")
             except Exception as exc:
                 fail(f"接口 {path} 失败: {exc}")
-    print(f"PASS: 物流项目验收通过（知识材料 {len(KB_FILES)} 份，回归样例 {len(cases)} 条，主题 {len(TOPIC_NAMES)} 类）")
+    print(f"PASS: 物流项目验收通过（知识材料 {len(KB_FILES)} 份，回归样例 {len(cases)} 条，拒答样例 {len(abstention_cases)} 条，主题 {len(TOPIC_NAMES)} 类）")
 
 
 if __name__ == "__main__":
