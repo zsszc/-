@@ -25,5 +25,5 @@
 
 ## 实现记录
 
-- 已生成 `logistics_train.jsonl` 130 条、`logistics_val.jsonl` 17 条、`logistics_test.jsonl` 57 条，覆盖 17 个物流主题。
+- 已生成 `logistics_train.jsonl` 300 条、`logistics_val.jsonl` 17 条、`logistics_test.jsonl` 57 条，覆盖 17 个物流主题。
 - 已通过标签合法性、主题覆盖、三份数据无重复和字段兼容检查。

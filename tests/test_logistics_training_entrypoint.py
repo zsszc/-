@@ -7,6 +7,8 @@ def test_training_entrypoint_documents_logistics_data_switch():
     assert "--output-dir" in source
     assert "logistics_train.jsonl" in source
     assert "logistics_val.jsonl" in source
+    assert "--epochs" in source
+    assert "--batch-size" in source
 
 
 def test_evaluation_entrypoint_supports_logistics_artifacts():

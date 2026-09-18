@@ -4,6 +4,10 @@ HF 下载不通时:HF_ENDPOINT=https://hf-mirror.com make ch10-train。"""
 import json
 import argparse
 import pathlib
+import sys
+
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
 
 import numpy as np
 from sklearn.metrics import f1_score
@@ -22,9 +26,9 @@ def load_jsonl(path: pathlib.Path) -> list[dict]:
     return [json.loads(l) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
 
 
-def encode(samples: list[dict], tokenizer) -> list[dict]:
+def encode(samples: list[dict], tokenizer, max_length: int = 128) -> list[dict]:
     enc = tokenizer([s["text"] for s in samples], truncation=True,
-                    padding="max_length", max_length=128)
+                    padding="max_length", max_length=max_length)
     items = []
     for i, s in enumerate(samples):
         vec = [0.0] * NUM_CLASSES                 # float 向量:BCEWithLogitsLoss 要求
@@ -62,23 +66,24 @@ class BestInMemory(TrainerCallback):
                                for k, v in self.model.state_dict().items()}
 
 
-def main(data_dir: pathlib.Path = DATA, output_dir: pathlib.Path = OUT) -> None:
+def main(data_dir: pathlib.Path = DATA, output_dir: pathlib.Path = OUT,
+         epochs: int = 8, batch_size: int = 16, max_length: int = 128) -> None:
     train_path = data_dir / ("train.jsonl" if (data_dir / "train.jsonl").exists() else "logistics_train.jsonl")
     val_path = data_dir / ("val.jsonl" if (data_dir / "val.jsonl").exists() else "logistics_val.jsonl")
     tokenizer = AutoTokenizer.from_pretrained(BASE)
     model = AutoModelForSequenceClassification.from_pretrained(
         BASE, num_labels=NUM_CLASSES, problem_type="multi_label_classification",
         id2label=ID2LABEL, label2id=LABEL2ID)
-    train_ds = encode(load_jsonl(train_path), tokenizer)
-    val_ds = encode(load_jsonl(val_path), tokenizer)
+    train_ds = encode(load_jsonl(train_path), tokenizer, max_length)
+    val_ds = encode(load_jsonl(val_path), tokenizer, max_length)
     args = TrainingArguments(
         output_dir="data/ch10/checkpoints",       # 只放训练日志,save_strategy=no 不写权重
         eval_strategy="epoch",                    # v5 参数名,不是 evaluation_strategy
         save_strategy="no",                       # 零磁盘 checkpoint,最优权重走 BestInMemory
         learning_rate=2e-5,
-        per_device_train_batch_size=16,
-        per_device_eval_batch_size=64,
-        num_train_epochs=8,
+        per_device_train_batch_size=batch_size,
+        per_device_eval_batch_size=max(32, batch_size * 2),
+        num_train_epochs=epochs,
         weight_decay=0.01,                        # 正则化防过拟合
         metric_for_best_model="micro_f1",         # EarlyStopping 盯它
         greater_is_better=True,
@@ -120,5 +125,8 @@ if __name__ == "__main__":
     parser.add_argument("--data-dir", type=pathlib.Path, default=DATA,
                         help="包含 train.jsonl 和 val.jsonl 的数据目录")
     parser.add_argument("--output-dir", type=pathlib.Path, default=OUT)
+    parser.add_argument("--epochs", type=int, default=8)
+    parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument("--max-length", type=int, default=128)
     args = parser.parse_args()
-    main(args.data_dir, args.output_dir)
+    main(args.data_dir, args.output_dir, args.epochs, args.batch_size, args.max_length)

@@ -26,4 +26,6 @@
 ## 实现记录
 
 - 已为训练脚本增加 `--data-dir` 和 `--output-dir`，并自动识别 `logistics_train.jsonl` / `logistics_val.jsonl`；默认旧数据路径保持兼容。
-- 数据生成、训练/评测入口静态检查通过；当前环境缺少 `torch` 和 `transformers`，因此未伪造正式 Transformer 训练指标，待具备训练依赖后执行微调。
+- 已准备独立原生 arm64 `.venv-m4-arm`，安装 PyTorch、Transformers、Accelerate、Scikit-learn 和 NumPy；原有 x86 `.venv` 保持不动。
+- 已完成 2 轮 CPU 烟测，验证集阈值扫描 micro-F1 为 0.8690，独立 57 条测试集 micro-F1 为 0.2087；该结果暴露出合成训练语句与测试语句分布仍有差异，不能直接作为最终模型成绩。
+- 模型权重保留在本地忽略目录，未上传 Git；评测报告已保存到 `data/ch10/reports/logistics-smoke/`。
