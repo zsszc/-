@@ -7,3 +7,7 @@ def test_logistics_overview_api(client):
     assert data["metrics"]["regression_cases"] >= 12
     assert data["metrics"]["logistics_topics"] == 17
     assert "query_shipment" in data["capabilities"]
+    assert data["operations"]["shipment_total"] == 2
+    assert sum(data["operations"]["status_distribution"].values()) == 2
+    assert data["operations"]["carrier_summary"]
+    assert 0 <= data["operations"]["human_handoff_rate"] <= 1
