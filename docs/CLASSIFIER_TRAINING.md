@@ -39,4 +39,4 @@ PYTHONPATH=. ./.venv-m4-arm/bin/python scripts/ch10/evaluate.py \
   --reports-dir data/ch10/reports/logistics
 ```
 
-当前烟测报告显示验证集和独立测试集差距较大，下一轮应优先优化训练/测试语句分布和数据质量，再增加训练轮数。
+物流主题数据是单标签任务，训练脚本会自动切换到 softmax/argmax；旧的多标签数据仍使用 sigmoid/阈值模式。当前单标签模型在 170 条均衡测试集上达到 micro-F1 0.8471、macro-F1 0.8520。

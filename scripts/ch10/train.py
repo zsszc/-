@@ -26,14 +26,18 @@ def load_jsonl(path: pathlib.Path) -> list[dict]:
     return [json.loads(l) for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
 
 
-def encode(samples: list[dict], tokenizer, max_length: int = 128) -> list[dict]:
+def encode(samples: list[dict], tokenizer, max_length: int = 128,
+           single_label: bool = False) -> list[dict]:
     enc = tokenizer([s["text"] for s in samples], truncation=True,
                     padding="max_length", max_length=max_length)
     items = []
     for i, s in enumerate(samples):
-        vec = [0.0] * NUM_CLASSES                 # float 向量:BCEWithLogitsLoss 要求
-        for lb in s["labels"]:
-            vec[LABEL2ID[lb]] = 1.0
+        if single_label:
+            vec = LABEL2ID[s["labels"][0]]
+        else:
+            vec = [0.0] * NUM_CLASSES             # float 向量:BCEWithLogitsLoss 要求
+            for lb in s["labels"]:
+                vec[LABEL2ID[lb]] = 1.0
         items.append({"input_ids": enc["input_ids"][i],
                       "attention_mask": enc["attention_mask"][i],
                       "token_type_ids": enc["token_type_ids"][i],
@@ -44,6 +48,13 @@ def encode(samples: list[dict], tokenizer, max_length: int = 128) -> list[dict]:
 def compute_metrics(eval_pred):
     logits, labels = eval_pred
     preds = (1 / (1 + np.exp(-logits)) >= 0.5).astype(int)
+    return {"micro_f1": f1_score(labels, preds, average="micro", zero_division=0),
+            "macro_f1": f1_score(labels, preds, average="macro", zero_division=0)}
+
+
+def compute_single_metrics(eval_pred):
+    logits, labels = eval_pred
+    preds = np.asarray(logits).argmax(axis=-1)
     return {"micro_f1": f1_score(labels, preds, average="micro", zero_division=0),
             "macro_f1": f1_score(labels, preds, average="macro", zero_division=0)}
 
@@ -71,12 +82,15 @@ def main(data_dir: pathlib.Path = DATA, output_dir: pathlib.Path = OUT,
          train_file: pathlib.Path | None = None, val_file: pathlib.Path | None = None) -> None:
     train_path = train_file or data_dir / ("train.jsonl" if (data_dir / "train.jsonl").exists() else "logistics_train.jsonl")
     val_path = val_file or data_dir / ("val.jsonl" if (data_dir / "val.jsonl").exists() else "logistics_val.jsonl")
+    train_samples, val_samples = load_jsonl(train_path), load_jsonl(val_path)
+    single_label = all(len(item["labels"]) == 1 for item in train_samples + val_samples)
     tokenizer = AutoTokenizer.from_pretrained(BASE)
     model = AutoModelForSequenceClassification.from_pretrained(
-        BASE, num_labels=NUM_CLASSES, problem_type="multi_label_classification",
+        BASE, num_labels=NUM_CLASSES,
+        problem_type=("single_label_classification" if single_label else "multi_label_classification"),
         id2label=ID2LABEL, label2id=LABEL2ID)
-    train_ds = encode(load_jsonl(train_path), tokenizer, max_length)
-    val_ds = encode(load_jsonl(val_path), tokenizer, max_length)
+    train_ds = encode(train_samples, tokenizer, max_length, single_label)
+    val_ds = encode(val_samples, tokenizer, max_length, single_label)
     args = TrainingArguments(
         output_dir="data/ch10/checkpoints",       # 只放训练日志,save_strategy=no 不写权重
         eval_strategy="epoch",                    # v5 参数名,不是 evaluation_strategy
@@ -97,28 +111,32 @@ def main(data_dir: pathlib.Path = DATA, output_dir: pathlib.Path = OUT,
         train_dataset=train_ds, eval_dataset=val_ds,
         processing_class=tokenizer,               # v5:tokenizer= 已改名
         data_collator=default_data_collator,
-        compute_metrics=compute_metrics,
+        compute_metrics=(compute_single_metrics if single_label else compute_metrics),
         callbacks=[EarlyStoppingCallback(early_stopping_patience=2), best_cb],
     )
     trainer.train()
     if best_cb.best_state is not None:            # 回填验证集最优权重(替代 load_best_model_at_end)
         model.load_state_dict(best_cb.best_state)
         print(f"回填最优权重:验证集 micro-F1 {best_cb.best_metric:.4f}")
-    # 验证集上扫全局最优阈值(0.30~0.70 步进 0.05)
     logits = trainer.predict(val_ds).predictions
-    probs = 1 / (1 + np.exp(-logits))
-    gold = np.array([d["labels"] for d in val_ds])
-    best_t, best_f1 = 0.5, -1.0
-    for t in np.arange(0.30, 0.71, 0.05):
-        f1 = f1_score(gold, (probs >= t).astype(int), average="micro", zero_division=0)
-        if f1 > best_f1:
-            best_t, best_f1 = round(float(t), 2), float(f1)
+    if single_label:
+        gold = np.array([d["labels"] for d in val_ds])
+        best_t, best_f1 = None, float(f1_score(gold, logits.argmax(axis=-1), average="micro", zero_division=0))
+    else:
+        probs = 1 / (1 + np.exp(-logits))
+        gold = np.array([d["labels"] for d in val_ds])
+        best_t, best_f1 = 0.5, -1.0
+        for t in np.arange(0.30, 0.71, 0.05):
+            f1 = f1_score(gold, (probs >= t).astype(int), average="micro", zero_division=0)
+            if f1 > best_f1:
+                best_t, best_f1 = round(float(t), 2), float(f1)
     output_dir.mkdir(parents=True, exist_ok=True)
     trainer.save_model(output_dir)
     tokenizer.save_pretrained(output_dir)
-    (output_dir / "threshold.json").write_text(
-        json.dumps({"threshold": best_t, "val_micro_f1": best_f1}))
-    print(f"最优阈值 {best_t},验证集 micro-F1 {best_f1:.4f};模型已存 {output_dir}")
+    (output_dir / "threshold.json").write_text(json.dumps({
+        "mode": "single_label" if single_label else "multi_label",
+        "threshold": best_t, "val_micro_f1": best_f1}))
+    print(f"分类模式 {'单标签' if single_label else '多标签'};验证集 micro-F1 {best_f1:.4f};模型已存 {output_dir}")
 
 
 if __name__ == "__main__":

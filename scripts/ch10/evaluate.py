@@ -26,15 +26,18 @@ def pick_device() -> str:
     return "mps" if torch.backends.mps.is_available() else "cpu"
 
 
-def predict(model, tokenizer, texts: list[str], threshold: float, device: str) -> np.ndarray:
+def predict(model, tokenizer, texts: list[str], threshold: float | None, device: str,
+            single_label: bool = False) -> np.ndarray:
     model.eval()
     probs_all = []
     with torch.no_grad():
         for i in range(0, len(texts), 32):
             enc = tokenizer(texts[i:i + 32], truncation=True, padding=True,
                             max_length=128, return_tensors="pt").to(device)
-            probs_all.append(torch.sigmoid(model(**enc).logits).cpu().numpy())
-    return apply_threshold(np.concatenate(probs_all), threshold)
+            logits = model(**enc).logits
+            probs_all.append((logits.argmax(dim=-1) if single_label else torch.sigmoid(logits)).cpu().numpy())
+    raw = np.concatenate(probs_all)
+    return raw if single_label else apply_threshold(raw, threshold)
 
 
 def main(model_dir: pathlib.Path = MODEL_DIR, test_path: pathlib.Path = TEST,
@@ -42,14 +45,21 @@ def main(model_dir: pathlib.Path = MODEL_DIR, test_path: pathlib.Path = TEST,
     device = pick_device()
     tokenizer = AutoTokenizer.from_pretrained(model_dir)
     model = AutoModelForSequenceClassification.from_pretrained(model_dir).to(device)
-    threshold = json.loads((model_dir / "threshold.json").read_text())["threshold"]
+    metadata = json.loads((model_dir / "threshold.json").read_text())
+    single_label = metadata.get("mode") == "single_label"
+    threshold = metadata.get("threshold")
     samples = [json.loads(l) for l in test_path.read_text(encoding="utf-8").splitlines() if l.strip()]
     texts = [s["text"] for s in samples]
     gold = np.zeros((len(samples), NUM_CLASSES), dtype=int)
     for i, s in enumerate(samples):
         for lb in s["labels"]:
             gold[i][LABEL2ID[lb]] = 1
-    preds = predict(model, tokenizer, texts, threshold, device)
+    preds_raw = predict(model, tokenizer, texts, threshold, device, single_label)
+    if single_label:
+        preds = np.zeros((len(samples), NUM_CLASSES), dtype=int)
+        preds[np.arange(len(samples)), preds_raw.astype(int)] = 1
+    else:
+        preds = preds_raw
 
     p, r, f1, support = precision_recall_fscore_support(gold, preds, zero_division=0)
     micro_p, micro_r, micro_f1, _ = precision_recall_fscore_support(
@@ -60,7 +70,7 @@ def main(model_dir: pathlib.Path = MODEL_DIR, test_path: pathlib.Path = TEST,
 
     reports_dir.mkdir(parents=True, exist_ok=True)
     lines = ["# ch10 分类器评测报告(留出测试集)", "",
-             f"测试集 {len(samples)} 条;判定阈值 {threshold}(验证集扫描所得)。", "",
+             f"测试集 {len(samples)} 条;分类模式 {'single_label/argmax' if single_label else f'multi_label/threshold={threshold}'}。", "",
              f"**micro**: P={micro_p:.3f} R={micro_r:.3f} F1={micro_f1:.3f}  |  "
              f"**macro**: P={macro_p:.3f} R={macro_r:.3f} F1={macro_f1:.3f}", "",
              "## 每类指标(容错红线:严档 F1 ≥ 0.9,中档 ≥ 0.8,宽档不设线)", "",
