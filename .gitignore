@@ -7,6 +7,9 @@ __pycache__/
 # 只放行 .env.example —— 它是对外发布的模板,里面只有占位符。
 .env.*
 !.env.example
+
+# 在线 Agent 评测报告含完整模型回答与工具结果，仅保留在本地，避免外发内部知识内容。
+data/evals/logistics_agent_eval_report_live.json
 .pytest_cache/
 .superpowers/
 data/*.db*

@@ -51,6 +51,24 @@ def _has_expected_tool(expected: str, actual: set[str]) -> bool:
     return bool(actual & TOOL_ALIASES.get(expected, {expected}))
 
 
+def select_cases(cases: list[dict[str, Any]], limit: int) -> list[dict[str, Any]]:
+    """按类别轮询抽样，避免 --limit 只取到文件开头的政策题。"""
+    if not limit or limit >= len(cases):
+        return cases
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for case in cases:
+        grouped[case["category"]].append(case)
+    selected = []
+    categories = list(grouped)
+    index = 0
+    while len(selected) < limit:
+        category = categories[index % len(categories)]
+        if grouped[category]:
+            selected.append(grouped[category].pop(0))
+        index += 1
+    return selected
+
+
 def score_case(case: dict[str, Any], response: dict[str, Any]) -> tuple[bool, str]:
     answer = str(response.get("answer") or "")
     actual = _actual_tool_names(response)
@@ -82,7 +100,7 @@ async def evaluate_live(cases: list[dict[str, Any]], base_url: str, concurrency:
         async with semaphore:
             payload = {"user_id": "eval-logistics-agent", "message": case["query"]}
             try:
-                async with httpx.AsyncClient(base_url=base_url, timeout=90) as client:
+                async with httpx.AsyncClient(base_url=base_url, timeout=90, trust_env=False) as client:
                     response = await client.post("/api/agent", json=payload)
                     response.raise_for_status()
                     body = response.json()
@@ -112,6 +130,7 @@ def main() -> None:
     parser.add_argument("--live", action="store_true", help="调用正在运行的 /api/agent")
     parser.add_argument("--limit", type=int, default=0, help="在线模式最多调用多少条，0 表示全部")
     parser.add_argument("--base-url", default=os.getenv("MEWHELP_EVAL_BASE", "http://127.0.0.1:8000"))
+    parser.add_argument("--concurrency", type=int, default=1, help="在线请求并发数，默认串行以降低上游限流风险")
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     args = parser.parse_args()
     if args.offline == args.live:
@@ -122,8 +141,10 @@ def main() -> None:
         return
     if args.limit < 0:
         parser.error("--limit 不能为负数")
-    selected = cases[:args.limit] if args.limit else cases
-    results = asyncio.run(evaluate_live(selected, args.base_url))
+    if args.concurrency < 1:
+        parser.error("--concurrency 必须大于 0")
+    selected = select_cases(cases, args.limit)
+    results = asyncio.run(evaluate_live(selected, args.base_url, args.concurrency))
     report = {"dataset": str(args.dataset.relative_to(ROOT)), "base_url": args.base_url, "summary": summarize(results), "results": results}
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

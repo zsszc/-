@@ -14,6 +14,7 @@
 - 在线模式按样本独立调用 Agent，记录答案、工具调用、工具结果、建议动作和中断信息。
 - 按评估类别计算可解释的 pass rate，不把“调用成功”误报成“答案事实正确”。
 - 在线评测默认需要显式传入 `--live`，并支持 `--limit` 控制调用数量。
+- `--limit` 使用类别轮询抽样，避免小规模抽测只覆盖评估集文件开头的一类题。
 
 ## 评测规则
 
@@ -36,3 +37,4 @@
 - 已实现 `scripts/eval_logistics_agent.py`，支持 `--offline` 数据验收、`--live --limit N` 小规模抽测和完整在线报告。
 - 已实现工具别名、库外拒答、边界澄清和知识证据的可解释规则，并补充 `tests/test_logistics_agent_evaluator.py`。
 - 已补充运行文档 `docs/AGENT_EVALUATION.md`。
+- `--limit` 已改为按类别轮询抽样，在线 HTTP 客户端关闭环境代理继承；30 条均衡抽样报告已保存到 `data/evals/logistics_agent_eval_report_live.json`，总通过率 0.5667。
