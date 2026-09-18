@@ -9,7 +9,9 @@ INTENT_TO_ROUTE: dict[str, str] = {
     "闲聊": "fallback_script",
     "其他": "fallback_script",
     "清关咨询": "knowledge",
-    "费用时效": "knowledge",
+    # 费用问题经常同时包含目的地、重量、运输方式和申报价值;
+    # 先走 Agent 工具链才能一次完成运费拆解与税费估算,不能被知识库闸门提前兜底。
+    "费用时效": "business",
     "异常处理": "knowledge",
     "理赔": "knowledge",
     "禁限寄": "knowledge",

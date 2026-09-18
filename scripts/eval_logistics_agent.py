@@ -85,6 +85,9 @@ def score_case(case: dict[str, Any], response: dict[str, Any]) -> tuple[bool, st
         clarified = any(marker in answer for marker in CLARIFY_MARKERS)
         return (not actual and (clarified or interrupted), f"clarified={clarified}, interrupted={interrupted}")
     evidence = any(marker in answer for marker in EVIDENCE_MARKERS)
+    # 工具返回的结构化结果本身就是本轮证据;不要求工具型回答强行伪造 FAQ 编号。
+    successful_tool_result = any(item.get("ok") for item in response.get("tool_results", []))
+    evidence = evidence or successful_tool_result
     if case.get("requires_citations"):
         evidence = evidence or any(
             any(marker in str(item.get("content", "")) for marker in EVIDENCE_MARKERS)

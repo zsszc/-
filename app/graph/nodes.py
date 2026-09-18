@@ -16,6 +16,7 @@ from app.core.observability import tag_intent
 from app.core.prompts import (
     AGENT_SYSTEM, COMPLAINT_REPLY_TEXT, FALLBACK_REPLY_TEXT,
     REFUND_JUDGE_HINT, SCRIPT_REPLY_CHITCHAT, SCRIPT_REPLY_OTHER,
+    SCRIPT_REPLY_OUT_OF_SCOPE,
 )
 from app.db import repository
 from app.graph.routing import INTENT_TO_ROUTE
@@ -110,8 +111,15 @@ async def script_reply(state) -> dict:
     """fallback_script 出口:闲聊/其他 兜底话术(零模型),按 intent 分文案——闲聊把话题引回产品,
     其他请用户说具体些。分流后立即命中、不进 Agent。
     (与 ch05 知识路证据弱的 fallback_reply 是两码事,名字相近但不同节点、不同触发点,勿混。)"""
-    text = SCRIPT_REPLY_OTHER if state.get("intent") == "其他" else SCRIPT_REPLY_CHITCHAT
-    return {"answer": text, "trace": {"route": "fallback_script"}}
+    query = (state.get("resolved_query") or _user_text(state) or "").lower()
+    out_of_scope_markers = ("航班", "飞机", "天气", "股票", "足球", "内部爆仓", "内部规则", "内部阈值")
+    is_out_of_scope = state.get("intent") == "其他" and any(marker in query for marker in out_of_scope_markers)
+    if is_out_of_scope:
+        text = SCRIPT_REPLY_OUT_OF_SCOPE
+    else:
+        text = SCRIPT_REPLY_OTHER if state.get("intent") == "其他" else SCRIPT_REPLY_CHITCHAT
+    trace = {"route": "fallback_script", "out_of_scope": is_out_of_scope}
+    return {"answer": text, "trace": trace}
 
 
 async def complaint_reply(state) -> dict:
