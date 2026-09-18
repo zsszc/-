@@ -1,0 +1,31 @@
+{
+  "total": 300,
+  "category_counts": {
+    "policy_process": 100,
+    "cross_document": 70,
+    "tool_operation": 60,
+    "out_of_scope": 50,
+    "boundary_clarification": 20
+  },
+  "must_abstain": 50,
+  "citation_cases": 250,
+  "topic_counts": {
+    "清关资料": 25,
+    "包裹破损": 20,
+    "禁限寄": 35,
+    "运输时效": 15,
+    "运输费用": 40,
+    "派送问题": 15,
+    "地址修改": 10,
+    "关税税费": 20,
+    "贸易单证": 15,
+    "退运处理": 10,
+    "承运商服务": 15,
+    "线路选择": 10,
+    "丢失理赔": 10,
+    "运单查询": 25,
+    "异常处理": 15,
+    "账户权限": 5,
+    "其他": 15
+  }
+}

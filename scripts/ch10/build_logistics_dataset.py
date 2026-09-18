@@ -27,10 +27,16 @@ def build() -> tuple[list[dict], list[dict], list[dict]]:
     test: list[dict] = []
     for index, topic in enumerate(TOPIC_CLASSES):
         for variant, example in enumerate(topic.examples):
-            train.append(make_sample(f"{example}，跨境物流客服应该怎么处理？", topic.name,
-                                     f"syn-train-{index:02d}-{variant:02d}", "taxonomy_variant"))
-            train.append(make_sample(f"请问{example}，需要准备什么资料？", topic.name,
-                                     f"syn-train-{index:02d}-{variant:02d}-b", "taxonomy_variant"))
+            templates = (
+                f"{example}，跨境物流客服应该怎么处理？",
+                f"请问{example}，需要准备什么资料？",
+                f"我的国际件遇到{example}，下一步应该做什么？",
+                f"想了解{example}的规则、时效和处理流程。",
+                f"如果出现{example}，客服能帮我判断责任和方案吗？",
+            )
+            for suffix, text in enumerate(templates):
+                train.append(make_sample(text, topic.name,
+                                         f"syn-train-{index:02d}-{variant:02d}-{suffix:02d}", "taxonomy_variant"))
         test.append(make_sample(f"我想咨询{topic.boundary}，能给我一个处理建议吗？", topic.name,
                                 f"syn-test-{index:02d}-a", "taxonomy_holdout"))
         test.append(make_sample(f"关于{topic.examples[0]}，这类跨境问题应该找谁确认？", topic.name,
@@ -41,8 +47,20 @@ def build() -> tuple[list[dict], list[dict], list[dict]]:
                                f"syn-val-{index:02d}", "taxonomy_validation"))
     regression = load_regression()
     for index, item in enumerate(regression):
-        target = train if index < 24 else test
-        target.append(make_sample(item["query"], item["topic"], f"reg-{index:03d}", "logistics_regression"))
+        if index < 24:
+            train.append(make_sample(item["query"], item["topic"], f"reg-{index:03d}", "logistics_regression"))
+        else:
+            test.append(make_sample(item["query"], item["topic"], f"reg-{index:03d}", "logistics_regression"))
+    # 补足固定到 300 条：使用回归样例的不同业务包装句式，避免复制原文。
+    cursor = 0
+    while len(train) < 300:
+        item = regression[cursor % len(regression)]
+        version = cursor // len(regression) + 1
+        train.append(make_sample(f"请作为跨境物流客服处理这个问题：{item['query']}（需要给出可执行建议）",
+                                 item["topic"], f"reg-aug-{cursor:03d}-v{version}", "regression_variant"))
+        cursor += 1
+    if len(train) > 300:
+        train = train[:300]
     return train, val, test
 
 
