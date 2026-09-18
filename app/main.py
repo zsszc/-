@@ -91,6 +91,23 @@ def _check_context_budget() -> None:
 
 
 app = FastAPI(title="跨境物流智能运营助手", version="0.1.0", lifespan=lifespan)
+
+
+@app.middleware("http")
+async def frontend_no_cache(request, call_next):
+    """前端页面和静态资源不缓存，避免部署新版后浏览器继续使用旧 UI。"""
+    response = await call_next(request)
+    path = request.url.path
+    if (path == "/" or path.startswith("/static/")
+            or path in {"/admin", "/kb", "/rag-eval", "/review", "/observability",
+                        "/topics", "/agent-eval", "/acceptance", "/acceptance/eval",
+                        "/acceptance/data", "/acceptance/errors", "/logistics-dashboard",
+                        "/shipment-detail"}):
+        response.headers["Cache-Control"] = "no-store, max-age=0"
+        response.headers.pop("ETag", None)
+    return response
+
+
 app.include_router(actions_router)
 app.include_router(chat_router)
 app.include_router(extract_router)
