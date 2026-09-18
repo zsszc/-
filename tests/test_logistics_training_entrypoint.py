@@ -7,3 +7,10 @@ def test_training_entrypoint_documents_logistics_data_switch():
     assert "--output-dir" in source
     assert "logistics_train.jsonl" in source
     assert "logistics_val.jsonl" in source
+
+
+def test_evaluation_entrypoint_supports_logistics_artifacts():
+    source = Path("scripts/ch10/evaluate.py").read_text(encoding="utf-8")
+    assert "--model-dir" in source
+    assert "--test" in source
+    assert "--reports-dir" in source

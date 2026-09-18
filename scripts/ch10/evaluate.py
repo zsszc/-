@@ -2,6 +2,7 @@
 运行:make ch10-eval。评测集扎在自家电商场景(dataset/test.jsonl),不引公开榜单。
 产物一式两份:.md 给人读、.json 给验收页读(/acceptance/eval、/acceptance/errors),同一次评测同一份数。"""
 import datetime as dt
+import argparse
 import json
 import pathlib
 
@@ -36,12 +37,13 @@ def predict(model, tokenizer, texts: list[str], threshold: float, device: str) -
     return apply_threshold(np.concatenate(probs_all), threshold)
 
 
-def main() -> None:
+def main(model_dir: pathlib.Path = MODEL_DIR, test_path: pathlib.Path = TEST,
+         reports_dir: pathlib.Path = REPORTS) -> None:
     device = pick_device()
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
-    model = AutoModelForSequenceClassification.from_pretrained(MODEL_DIR).to(device)
-    threshold = json.loads((MODEL_DIR / "threshold.json").read_text())["threshold"]
-    samples = [json.loads(l) for l in TEST.read_text(encoding="utf-8").splitlines() if l.strip()]
+    tokenizer = AutoTokenizer.from_pretrained(model_dir)
+    model = AutoModelForSequenceClassification.from_pretrained(model_dir).to(device)
+    threshold = json.loads((model_dir / "threshold.json").read_text())["threshold"]
+    samples = [json.loads(l) for l in test_path.read_text(encoding="utf-8").splitlines() if l.strip()]
     texts = [s["text"] for s in samples]
     gold = np.zeros((len(samples), NUM_CLASSES), dtype=int)
     for i, s in enumerate(samples):
@@ -56,7 +58,7 @@ def main() -> None:
         gold, preds, average="macro", zero_division=0)
     cms = multilabel_confusion_matrix(gold, preds)
 
-    REPORTS.mkdir(parents=True, exist_ok=True)
+    reports_dir.mkdir(parents=True, exist_ok=True)
     lines = ["# ch10 分类器评测报告(留出测试集)", "",
              f"测试集 {len(samples)} 条;判定阈值 {threshold}(验证集扫描所得)。", "",
              f"**micro**: P={micro_p:.3f} R={micro_r:.3f} F1={micro_f1:.3f}  |  "
@@ -79,7 +81,7 @@ def main() -> None:
         tn, fp = cms[i][0]
         fn, tp = cms[i][1]
         lines.append(f"- **{name}**: TN={tn} FP={fp} FN={fn} TP={tp}")
-    (REPORTS / "eval_report.md").write_text("\n".join(lines), encoding="utf-8")
+    (reports_dir / "eval_report.md").write_text("\n".join(lines), encoding="utf-8")
 
     err = ["# ch10 判错样本(人工复核:错在哪一类?标注本身有没有毛病?)", ""]
     errors: list[dict] = []
@@ -95,7 +97,7 @@ def main() -> None:
             errors.append({"text": s["text"], "gold": list(s["labels"]), "pred": pred_labels,
                            "missed": missed, "extra": extra, "kind": kind,
                            "matrix_entries": len(missed) + len(extra)})
-    (REPORTS / "error_samples.md").write_text("\n".join(err), encoding="utf-8")
+    (reports_dir / "error_samples.md").write_text("\n".join(err), encoding="utf-8")
 
     report = {
         "ran_at": dt.datetime.now().isoformat(timespec="seconds"),
@@ -124,11 +126,16 @@ def main() -> None:
     report["total_fp"] = sum(c["fp"] for c in report["classes"])
     report["total_fn"] = sum(c["fn"] for c in report["classes"])
     report["red_line_passed"] = all(c["passed"] is not False for c in report["classes"])
-    (REPORTS / "eval_report.json").write_text(
+    (reports_dir / "eval_report.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"micro-F1 {micro_f1:.4f} / macro-F1 {macro_f1:.4f};"
-          f"报告与判错样本已落 {REPORTS}/(.md + .json)")
+          f"报告与判错样本已落 {reports_dir}/(.md + .json)")
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model-dir", type=pathlib.Path, default=MODEL_DIR)
+    parser.add_argument("--test", type=pathlib.Path, default=TEST)
+    parser.add_argument("--reports-dir", type=pathlib.Path, default=REPORTS)
+    args = parser.parse_args()
+    main(args.model_dir, args.test, args.reports_dir)
