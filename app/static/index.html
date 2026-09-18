@@ -6,7 +6,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>航迹云 · 跨境物流运营助手</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'><rect x='2' y='2' width='4' height='4' fill='%2316324f'/><rect x='10' y='2' width='4' height='4' fill='%2316324f'/><rect x='2' y='4' width='12' height='9' fill='%2316324f'/><rect x='3' y='3' width='2' height='3' fill='%238de0d3'/><rect x='11' y='3' width='2' height='3' fill='%238de0d3'/><rect x='3' y='5' width='10' height='7' fill='%238de0d3'/><rect x='5' y='7' width='1' height='2' fill='%2316324f'/><rect x='10' y='7' width='1' height='2' fill='%2316324f'/><rect x='7' y='9' width='2' height='1' fill='%231769aa'/></svg>" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M4 7h24v18H4z' fill='%238de0d3' stroke='%2316324f' stroke-width='2'/><path d='M4 12h24M9 7v18' fill='none' stroke='%2316324f' stroke-width='2'/><path d='M17 19c3-7 7-7 11-10' fill='none' stroke='%231769aa' stroke-width='2'/><circle cx='17' cy='19' r='2' fill='%231769aa'/></svg>" />
   <style>
     :root {
       --ink: #16324f;
@@ -566,19 +566,12 @@
     const CONV_KEY = "mewhelp_conversation_id";     // 当前会话 id,由后端 done 帧回传
     const SUGGESTIONS = ["我的国际运单到哪了?", "清关中一般要多久?", "帮我估算到德国的运费", "包裹破损怎么理赔?"];
     const CAT_SVG =
-      '<svg viewBox="0 0 16 16" shape-rendering="crispEdges">' +
-      '<rect x="2" y="2" width="4" height="4" fill="#16324f"/>' +
-      '<rect x="10" y="2" width="4" height="4" fill="#16324f"/>' +
-      '<rect x="2" y="4" width="12" height="9" fill="#16324f"/>' +
-      '<rect x="3" y="3" width="2" height="3" fill="#8de0d3"/>' +
-      '<rect x="11" y="3" width="2" height="3" fill="#8de0d3"/>' +
-      '<rect x="3" y="5" width="10" height="7" fill="#8de0d3"/>' +
-      '<rect x="5" y="7" width="1" height="2" fill="#16324f"/>' +
-      '<rect x="10" y="7" width="1" height="2" fill="#16324f"/>' +
-      '<rect x="7" y="9" width="2" height="1" fill="#1769aa"/>' +
-      '<rect x="4" y="10" width="1" height="1" fill="#ffd7a8"/>' +
-      '<rect x="11" y="10" width="1" height="1" fill="#ffd7a8"/>' +
-      "</svg>";
+      '<svg viewBox="0 0 32 32" aria-hidden="true">' +
+      '<path d="M4 7h24v18H4z" fill="#8de0d3" stroke="#16324f" stroke-width="2"/>' +
+      '<path d="M4 12h24M9 7v18" fill="none" stroke="#16324f" stroke-width="2"/>' +
+      '<path d="M17 19c3-7 7-7 11-10" fill="none" stroke="#1769aa" stroke-width="2"/>' +
+      '<circle cx="17" cy="19" r="2" fill="#1769aa"/>' +
+      '</svg>';
     // 点赞/点踩大拇指(矢量填充,fill=currentColor:平时 ink、点亮时随按钮变白)
     const THUMB_UP_SVG =
       '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg>';
