@@ -67,9 +67,10 @@ class BestInMemory(TrainerCallback):
 
 
 def main(data_dir: pathlib.Path = DATA, output_dir: pathlib.Path = OUT,
-         epochs: int = 8, batch_size: int = 16, max_length: int = 128) -> None:
-    train_path = data_dir / ("train.jsonl" if (data_dir / "train.jsonl").exists() else "logistics_train.jsonl")
-    val_path = data_dir / ("val.jsonl" if (data_dir / "val.jsonl").exists() else "logistics_val.jsonl")
+         epochs: int = 8, batch_size: int = 16, max_length: int = 128,
+         train_file: pathlib.Path | None = None, val_file: pathlib.Path | None = None) -> None:
+    train_path = train_file or data_dir / ("train.jsonl" if (data_dir / "train.jsonl").exists() else "logistics_train.jsonl")
+    val_path = val_file or data_dir / ("val.jsonl" if (data_dir / "val.jsonl").exists() else "logistics_val.jsonl")
     tokenizer = AutoTokenizer.from_pretrained(BASE)
     model = AutoModelForSequenceClassification.from_pretrained(
         BASE, num_labels=NUM_CLASSES, problem_type="multi_label_classification",
@@ -128,5 +129,8 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", type=int, default=8)
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--max-length", type=int, default=128)
+    parser.add_argument("--train-file", type=pathlib.Path)
+    parser.add_argument("--val-file", type=pathlib.Path)
     args = parser.parse_args()
-    main(args.data_dir, args.output_dir, args.epochs, args.batch_size, args.max_length)
+    main(args.data_dir, args.output_dir, args.epochs, args.batch_size, args.max_length,
+         args.train_file, args.val_file)
