@@ -12,6 +12,15 @@ def test_shipment_snapshot_is_stable_and_has_operational_fields():
     assert {"tracking_no", "status", "current_node", "trace"} <= first.keys()
 
 
+def test_shipment_snapshot_exposes_structured_timeline():
+    snapshot = shipment_snapshot("CNDE20260917001")
+    assert {"events", "route", "service_level", "sla_due_at", "exception_code"} <= snapshot.keys()
+    assert {"origin", "destination"} <= snapshot.keys()
+    assert len(snapshot["events"]) == 5
+    assert {"event_id", "occurred_at", "location", "status", "description", "completed"} <= snapshot["events"][0].keys()
+    assert sum(event["completed"] for event in snapshot["events"]) >= 1
+
+
 def test_shipment_is_scoped_to_user_identity():
     assert owns_shipment("demo-user", "CNDE20260917001")
     assert not owns_shipment("", "CNDE20260917001")

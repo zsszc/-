@@ -54,16 +54,48 @@ DEMO_TRACKING_NOS = ("CNDE20260917001", "CNUS20260917002")
 def shipment_snapshot(tracking_no: str) -> dict:
     """跨境运单 mock 快照：同一运单号每次返回稳定结果。"""
     rng = random.Random(f"shipment:{tracking_no}")
-    status = rng.choice(["已揽收", "运输中", "清关中", "派送中", "已签收"])
-    city = rng.choice(["深圳", "广州", "法兰克福", "洛杉矶", "东京"])
+    status_index = rng.randrange(5)
+    statuses = ["已揽收", "运输中", "清关中", "派送中", "已签收"]
+    status = statuses[status_index]
+    destination, destination_city = ("德国", "法兰克福") if tracking_no.startswith("CNDE") else ("美国", "洛杉矶")
+    origin_city = rng.choice(["深圳", "广州"])
+    carrier = rng.choice(["DHL", "FedEx", "UPS", "顺丰国际"])
+    service_level = rng.choice(["标准", "经济"])
+    base_day = 17
+    node_names = [
+        ("已揽收", origin_city, "已完成揽收并生成出口面单"),
+        ("运输中", "香港转运中心", "已离开发运地，等待国际干线"),
+        ("清关中", destination_city, "目的国海关查验资料中"),
+        ("派送中", destination_city, "已交本地末端网络派送"),
+        ("已签收", destination_city, "收件人已完成签收"),
+    ]
+    events = []
+    for index, (event_status, city, description) in enumerate(node_names):
+        events.append({
+            "event_id": f"{tracking_no}-{index + 1}",
+            "occurred_at": f"2026-09-{base_day + index * 2:02d} {10 + index:02d}:30",
+            "location": city,
+            "status": event_status,
+            "description": description,
+            "completed": index <= status_index,
+        })
+    current_event = events[status_index]
+    exception_code = "CUSTOMS_DOCUMENT_REVIEW" if status == "清关中" else None
     return {
         "tracking_no": tracking_no,
         "status": status,
-        "current_node": city,
-        "carrier": rng.choice(["DHL", "FedEx", "UPS", "顺丰国际"]),
+        "current_node": current_event["location"],
+        "carrier": carrier,
+        "origin": origin_city,
+        "destination": destination,
+        "route": {"origin": origin_city, "destination": destination_city},
+        "service_level": service_level,
         "last_update": "2026-09-17 10:30",
         "estimated_delivery": f"2026-09-{rng.randint(20, 28):02d}",
-        "trace": [f"{city}处理中心：{status}", "等待下一运输节点更新"],
+        "sla_due_at": f"2026-09-{24 if service_level == '标准' else 28:02d} 23:59",
+        "exception_code": exception_code,
+        "events": events,
+        "trace": [f"{current_event['location']}处理中心：{status}", "等待下一运输节点更新"],
     }
 
 
