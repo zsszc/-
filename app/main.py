@@ -104,7 +104,6 @@ async def frontend_no_cache(request, call_next):
                         "/acceptance/data", "/acceptance/errors", "/logistics-dashboard",
                         "/shipment-detail"}):
         response.headers["Cache-Control"] = "no-store, max-age=0"
-        response.headers.pop("ETag", None)
     return response
 
 
