@@ -133,6 +133,11 @@ async def logistics_dashboard_page() -> FileResponse:
     return FileResponse(_STATIC_DIR / "logistics-dashboard.html")
 
 
+@app.get("/shipment-detail", include_in_schema=False)
+async def shipment_detail_page() -> FileResponse:
+    return FileResponse(_STATIC_DIR / "shipment-detail.html")
+
+
 @app.get("/kb", include_in_schema=False)
 async def kb_page() -> FileResponse:
     """ch03 知识库录入页:贴文档就能切块入库、向量化、当场检索自测。"""

@@ -37,3 +37,11 @@ def test_admin_pages_are_reachable():
         assert "/static/admin.js" in resp.text, path    # 后台导航一份共用
     for asset in ("/static/admin.js", "/static/acceptance.js", "/static/acceptance.css"):
         assert client.get(asset).status_code == 200, asset
+
+
+def test_shipment_detail_page_is_reachable():
+    resp = client.get("/shipment-detail")
+    assert resp.status_code == 200
+    assert "运单详情" in resp.text
+    assert "/api/logistics/shipment-query" in resp.text
+    assert "events" in resp.text
