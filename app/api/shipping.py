@@ -11,6 +11,7 @@ class ShippingFeeIn(BaseModel):
     destination: str = Field(min_length=1, max_length=100)
     weight_kg: float = Field(gt=0, le=1000)
     transport_mode: str = Field(pattern="^(经济|标准|特快)$")
+    declared_value_cny: float = Field(default=0, ge=0, le=1000000)
 
 
 @router.post("/shipping-fee")

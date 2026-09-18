@@ -47,15 +47,32 @@ async def estimate_shipping_fee(
     destination: Annotated[str, Field(description="目的地国家或城市")],
     weight_kg: Annotated[float, Field(gt=0, le=1000, description="包裹重量，单位 kg")],
     transport_mode: Annotated[str, Field(description="运输方式：经济、标准或特快")],
+    declared_value_cny: Annotated[float, Field(ge=0, le=1000000, description="申报价值，单位人民币；未知时填 0")]=0,
 ) -> dict:
-    """根据基础参数估算跨境运输费用，仅用于方案比较，不代表最终报价。"""
+    """根据基础参数估算运输费用并提示目的国税费，仅用于方案比较，不代表最终报价。"""
     multipliers = {"经济": 38, "标准": 58, "特快": 96}
     multiplier = multipliers.get(transport_mode, 58)
-    fee = round(max(weight_kg, 0.5) * multiplier + 35, 2)
+    base_fee = round(max(weight_kg, 0.5) * multiplier + 35, 2)
+    fuel_surcharge = round(base_fee * 0.08, 2)
+    remote_area_fee = 20 if any(word in destination for word in ("偏远", "岛", "Alaska", "Hawaii")) else 0
+    transport_total = round(base_fee + fuel_surcharge + remote_area_fee, 2)
+    if any(word in destination for word in ("德国", "法国", "意大利", "西班牙", "欧盟")):
+        duty_rate, vat_rate = 0.06, 0.19
+    elif any(word in destination for word in ("美国", "加拿大")):
+        duty_rate, vat_rate = 0.05, 0.0
+    else:
+        duty_rate, vat_rate = 0.08, 0.13
+    duty = round(declared_value_cny * duty_rate, 2)
+    vat = round((declared_value_cny + duty) * vat_rate, 2)
     return {
         "origin": origin, "destination": destination, "weight_kg": weight_kg,
-        "transport_mode": transport_mode, "estimated_fee_cny": fee,
-        "notice": "估算不含目的国税费、偏远地区费和特殊处理费，以承运商最终报价为准",
+        "transport_mode": transport_mode, "estimated_fee_cny": base_fee,
+        "fee_breakdown": {"base_fee_cny": base_fee, "fuel_surcharge_cny": fuel_surcharge,
+                          "remote_area_fee_cny": remote_area_fee, "transport_total_cny": transport_total},
+        "tax_estimate": {"declared_value_cny": declared_value_cny, "duty_rate": duty_rate,
+                          "duty_cny": duty, "vat_rate": vat_rate, "vat_cny": vat,
+                          "tax_total_cny": round(duty + vat, 2)},
+        "notice": "税费仅按申报价值和目的地常见规则粗略估算，不代表海关最终征税；运输报价以承运商最终报价为准",
     }
 
 
