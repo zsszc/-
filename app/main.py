@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.acceptance import router as acceptance_router
+from app.api.agent_eval import router as agent_eval_router
 from app.api.actions import router as actions_router
 from app.api.admin import router as admin_router
 from app.api.agent import router as agent_router
@@ -99,6 +100,7 @@ app.include_router(feedback_router)
 app.include_router(review_router)
 app.include_router(topics_router)
 app.include_router(acceptance_router)
+app.include_router(agent_eval_router)
 app.include_router(kb_router)
 app.include_router(logistics_router)
 app.include_router(shipping_router)
@@ -119,6 +121,11 @@ app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 @app.get("/", include_in_schema=False)
 async def chat_page() -> FileResponse:
     return FileResponse(_STATIC_DIR / "index.html")
+
+
+@app.get("/agent-eval", include_in_schema=False)
+async def agent_eval_page() -> FileResponse:
+    return FileResponse(_STATIC_DIR / "agent-eval.html")
 
 
 @app.get("/admin", include_in_schema=False)

@@ -14,6 +14,7 @@
     { href: "/review", label: "飞轮待审" },
     { href: "/observability", label: "观测与成本" },
     { href: "/topics", label: "主题分布" },
+    { href: "/agent-eval", label: "Agent 评测" },
     {
       href: "/acceptance", label: "分类器验收",
       children: [

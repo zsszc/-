@@ -8,7 +8,7 @@
 """
 from fastapi import APIRouter
 
-from app.api import acceptance, kb, observability, rageval
+from app.api import acceptance, agent_eval, kb, observability, rageval
 from app.db import repository
 
 router = APIRouter(prefix="/api/admin")
@@ -198,8 +198,36 @@ async def _classifier_card() -> dict:
     return card
 
 
+async def _agent_eval_card() -> dict:
+    """Agent 综合评测:数据集就绪与最近在线行为指标,不在后台请求中重跑模型。"""
+    card = _card("agent-eval", "Agent 综合评测", "/agent-eval",
+                 "300 条物流问题 → 工具选择、库外拒答、边界澄清、证据表现")
+    try:
+        ov = agent_eval.build_overview()
+    except Exception as e:
+        card["note"] = f"{type(e).__name__}: {e}"
+        return card
+    dataset, live = ov["dataset"], ov["live"]
+    card["metrics"] = [{"label": "评估集", "value": f"{dataset['total']} 条"},
+                       {"label": "类别", "value": f"{len(dataset['categories'])} 类"}]
+    if dataset["status"] != "ok":
+        card["status"], card["headline"] = "attention", "评估集不完整,请先运行离线验收"
+    elif live["status"] == "ok":
+        summary = live["summary"] or {}
+        card["status"] = "ok"
+        card["headline"] = f"最近在线通过率 {round((summary.get('pass_rate') or 0) * 100)}%"
+        card["metrics"].append({"label": "在线样本", "value": summary.get("total", "—")})
+    elif live["status"] == "error":
+        card["status"], card["headline"] = "error", "在线报告无法读取"
+        card["note"] = live.get("note")
+    else:
+        card["status"], card["headline"] = "missing", "数据集已就绪,尚未在线评测"
+        card["note"] = "建议先执行 5 条抽测,再决定是否跑完整 300 条"
+    return card
+
+
 @router.get("/overview")
 async def overview() -> dict:
     return {"modules": [await _kb_card(), await _rageval_card(), await _review_card(),
                         await _observability_card(), await _topics_card(),
-                        await _classifier_card()]}
+                        await _classifier_card(), await _agent_eval_card()]}

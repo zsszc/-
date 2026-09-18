@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>航迹云 · Agent 综合评测</title>
+  <link rel="stylesheet" href="/static/acceptance.css" />
+  <style>
+    .grid { margin-top: 16px; display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+    .metric, .cat { background: var(--cream); border: 4px solid var(--ink); box-shadow: var(--shadow); padding: 14px; }
+    .metric b { display:block; font-size: 25px; margin-top: 5px; }
+    .metric small, .cat small { color: var(--muted); }
+    .cat { box-shadow: var(--shadow-sm); }
+    .cat h3 { margin: 0 0 8px; font-size: 14px; }
+    .rate { font-size: 24px; font-weight: 700; }
+    .hint { margin-top: 14px; line-height: 1.8; }
+    code { background: var(--paper); border: 2px solid var(--ink); padding: 2px 5px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar"><h1>Agent 综合评测</h1><span class="sub">行为回归，不替代人工事实审核</span><span class="spacer"></span><button class="btn" id="refresh">刷新</button></div>
+    <div id="content"><div class="panel">加载中…</div></div>
+  </div>
+  <script src="/static/admin.js"></script>
+  <script src="/static/acceptance.js"></script>
+  <script>
+    const LABEL = { policy_process: "政策流程", cross_document: "跨文档", tool_operation: "工具操作", out_of_scope: "库外拒答", boundary_clarification: "边界澄清" };
+    const pct = (v) => v === null || v === undefined ? "—" : Math.round(v * 100) + "%";
+    function render(d) {
+      const ds = d.dataset, live = d.live;
+      const html = `<div class="grid"><div class="metric"><small>评估集</small><b>${ds.total} 条</b><span>${ds.status === "ok" ? "五类数据完整" : "数据需要检查"}</span></div><div class="metric"><small>库外拒答题</small><b>${ds.must_abstain}</b><span>要求安全拒答</span></div><div class="metric"><small>证据题</small><b>${ds.requires_citations}</b><span>要求知识依据</span></div><div class="metric"><small>最近在线通过率</small><b>${live.summary ? pct(live.summary.pass_rate) : "未评测"}</b><span>${live.summary ? live.summary.total + " 条在线样本" : "尚无在线报告"}</span></div></div><div class="panel"><h2>分类表现</h2><p class="lede">规则只统计行为信号：工具轨迹、拒答、澄清和证据，不把接口成功等同于答案正确。</p><div class="grid">${Object.entries(ds.categories).map(([k, n]) => { const x = live.by_category[k] || {}; return `<div class="cat"><h3>${LABEL[k] || k}</h3><small>数据集 ${n} 条</small><div class="rate">${live.summary ? pct(x.pass_rate) : "—"}</div><small>${live.summary ? `${x.passed}/${x.total} 通过` : "等待在线评测"}</small></div>`; }).join("")}</div></div><div class="panel hint"><h2>运行入口</h2><p><code>${d.commands.offline}</code></p><p><code>${d.commands.sample}</code></p><p>完整 300 条在线评测会产生较多模型调用，请确认服务和额度后再运行。</p></div>`;
+      $("content").innerHTML = html;
+    }
+    async function load() { try { render(await api("/api/agent-eval/overview")); } catch (e) { $("content").innerHTML = `<div class="panel">读取失败：${e.message}</div>`; } }
+    mountAdminNav("/agent-eval"); $("refresh").addEventListener("click", load); load();
+  </script>
+</body>
+</html>

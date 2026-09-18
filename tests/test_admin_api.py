@@ -5,7 +5,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.api import admin as admin_api
 
-CARDS = ("kb", "rageval", "review", "observability", "topics", "classifier")
+CARDS = ("kb", "rageval", "review", "observability", "topics", "classifier", "agent-eval")
 
 
 @pytest.fixture
