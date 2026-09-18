@@ -1,0 +1,17 @@
+{"id": "syn-val-00", "text": "如果是查运单，通常要如何跟进？", "labels": ["运单查询"], "source": "taxonomy_validation"}
+{"id": "syn-val-01", "text": "如果是海关查验，通常要如何跟进？", "labels": ["清关资料"], "source": "taxonomy_validation"}
+{"id": "syn-val-02", "text": "如果是进口税谁付，通常要如何跟进？", "labels": ["关税税费"], "source": "taxonomy_validation"}
+{"id": "syn-val-03", "text": "如果是运输几天，通常要如何跟进？", "labels": ["运输时效"], "source": "taxonomy_validation"}
+{"id": "syn-val-04", "text": "如果是体积重，通常要如何跟进？", "labels": ["运输费用"], "source": "taxonomy_validation"}
+{"id": "syn-val-05", "text": "如果是运输延误，通常要如何跟进？", "labels": ["异常处理"], "source": "taxonomy_validation"}
+{"id": "syn-val-06", "text": "如果是没人收件，通常要如何跟进？", "labels": ["派送问题"], "source": "taxonomy_validation"}
+{"id": "syn-val-07", "text": "如果是电话写错，通常要如何跟进？", "labels": ["地址修改"], "source": "taxonomy_validation"}
+{"id": "syn-val-08", "text": "如果是液体能寄吗，通常要如何跟进？", "labels": ["禁限寄"], "source": "taxonomy_validation"}
+{"id": "syn-val-09", "text": "如果是少了东西，通常要如何跟进？", "labels": ["包裹破损"], "source": "taxonomy_validation"}
+{"id": "syn-val-10", "text": "如果是怎么理赔，通常要如何跟进？", "labels": ["丢失理赔"], "source": "taxonomy_validation"}
+{"id": "syn-val-11", "text": "如果是拒收，通常要如何跟进？", "labels": ["退运处理"], "source": "taxonomy_validation"}
+{"id": "syn-val-12", "text": "如果是FedEx，通常要如何跟进？", "labels": ["承运商服务"], "source": "taxonomy_validation"}
+{"id": "syn-val-13", "text": "如果是装箱单，通常要如何跟进？", "labels": ["贸易单证"], "source": "taxonomy_validation"}
+{"id": "syn-val-14", "text": "如果是经济还是特快，通常要如何跟进？", "labels": ["线路选择"], "source": "taxonomy_validation"}
+{"id": "syn-val-15", "text": "如果是账号安全，通常要如何跟进？", "labels": ["账户权限"], "source": "taxonomy_validation"}
+{"id": "syn-val-16", "text": "如果是转人工，通常要如何跟进？", "labels": ["其他"], "source": "taxonomy_validation"}
