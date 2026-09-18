@@ -1,0 +1,81 @@
+{
+  "method": "character-bigram-exemplar",
+  "baseline_samples": 2594,
+  "augmented_samples": 2667,
+  "holdout_size": 10,
+  "baseline_accuracy": 0.1,
+  "augmented_accuracy": 0.4,
+  "improvement": 0.3,
+  "rows": [
+    {
+      "id": "lg-021",
+      "query": "包裹少了一件，理赔要什么凭证",
+      "gold": "包裹破损",
+      "before": "运输费用",
+      "after": "包裹破损"
+    },
+    {
+      "id": "lg-022",
+      "query": "国际包裹确认丢失后怎么赔",
+      "gold": "丢失理赔",
+      "before": "运输费用",
+      "after": "退运处理"
+    },
+    {
+      "id": "lg-023",
+      "query": "清关失败被退回，退运费用怎么算",
+      "gold": "退运处理",
+      "before": "运输费用",
+      "after": "退运处理"
+    },
+    {
+      "id": "lg-024",
+      "query": "DHL 和 UPS 的轨迹更新有什么区别",
+      "gold": "承运商服务",
+      "before": "线路选择",
+      "after": "运单查询"
+    },
+    {
+      "id": "lg-025",
+      "query": "到美国的进口税是寄件人付还是收件人付",
+      "gold": "关税税费",
+      "before": "运单查询",
+      "after": "关税税费"
+    },
+    {
+      "id": "lg-026",
+      "query": "我的国际件三天没更新了，帮我判断是否延误",
+      "gold": "异常处理",
+      "before": "运单查询",
+      "after": "运单查询"
+    },
+    {
+      "id": "lg-027",
+      "query": "帮我看一下 CNDE20260917001 是否接近 SLA",
+      "gold": "运输时效",
+      "before": "退运处理",
+      "after": "运单查询"
+    },
+    {
+      "id": "lg-028",
+      "query": "想寄带磁铁的设备，需要提前确认吗",
+      "gold": "禁限寄",
+      "before": "贸易单证",
+      "after": "贸易单证"
+    },
+    {
+      "id": "lg-029",
+      "query": "我的货在目的国清关中，下一步该做什么",
+      "gold": "清关资料",
+      "before": "账户权限",
+      "after": "清关资料"
+    },
+    {
+      "id": "lg-030",
+      "query": "请估算上海到东京 0.8kg 特快运费",
+      "gold": "运输费用",
+      "before": "运输费用",
+      "after": "退运处理"
+    }
+  ]
+}
