@@ -76,6 +76,9 @@ def score_case(case: dict[str, Any], response: dict[str, Any]) -> tuple[bool, st
     if category == "tool_operation":
         expected = case.get("expected_tools", [])
         return (any(_has_expected_tool(tool, actual) for tool in expected), f"actual_tools={sorted(actual)}")
+    if category == "cross_document" and "query_shipment" in case.get("expected_tools", []) and not actual:
+        clarified = any(marker in answer for marker in CLARIFY_MARKERS)
+        return (clarified, f"missing_tracking_clarification={clarified}")
     if category == "out_of_scope":
         suggested = json.dumps(response.get("suggested_actions", []), ensure_ascii=False)
         refused = any(marker in answer for marker in REFUSAL_MARKERS + ("转人工",))

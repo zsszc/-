@@ -16,7 +16,7 @@ from app.core.observability import tag_intent
 from app.core.prompts import (
     AGENT_SYSTEM, COMPLAINT_REPLY_TEXT, FALLBACK_REPLY_TEXT,
     REFUND_JUDGE_HINT, SCRIPT_REPLY_CHITCHAT, SCRIPT_REPLY_OTHER,
-    SCRIPT_REPLY_OUT_OF_SCOPE,
+    SCRIPT_REPLY_OUT_OF_SCOPE, SHIPMENT_CLARIFICATION_REPLY,
 )
 from app.db import repository
 from app.graph.routing import INTENT_TO_ROUTE
@@ -138,6 +138,10 @@ async def fallback_reply(state) -> dict:
     (ch09:source 打对标签 retrieval_low_conf/self_check,随条存召回快照给审核页)。
     话术让用户「联系人工客服」,转人工按钮就得一并递给前端(actions 帧),不能光嘴上说。"""
     source = state.get("fallback_source") or "retrieval_low_conf"
+    query = state.get("resolved_query") or _user_text(state)
+    needs_tracking = (not _extract_order_id(query)
+                      and any(word in query.lower() for word in ("sla", "超时", "超过", "时效"))
+                      and any(word in query for word in ("清关", "包裹", "运单", "物流")))
     signals = state.get("trace", {}).get("confidence_signals") or {}
     reason = (f"evidence_confidence={state.get('evidence_confidence', 0.0):.3f} "
               f"signals={json.dumps(signals, ensure_ascii=False)}")
@@ -151,9 +155,9 @@ async def fallback_reply(state) -> dict:
         state.get("conversation_id"), _user_text(state), source, reason,
         retrieved_chunks=snapshot,
     )
-    return {"answer": FALLBACK_REPLY,
+    return {"answer": SHIPMENT_CLARIFICATION_REPLY if needs_tracking else FALLBACK_REPLY,
             "suggested_actions": [{"type": "transfer_human"}],
-            "trace": {"route": "fallback"}}
+            "trace": {"route": "fallback", "needs_tracking": needs_tracking}}
 
 
 async def resolve_reference(state) -> dict:
