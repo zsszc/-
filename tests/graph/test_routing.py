@@ -3,6 +3,7 @@ from langchain_core.messages import AIMessage
 
 from app.config import settings
 from app.core.intent import INTENTS
+from app.core.prompts import SCRIPT_REPLY_OTHER
 from app.graph.routing import (
     confidence_gate, route_by_intent, should_continue, INTENT_TO_ROUTE,
 )
@@ -29,6 +30,23 @@ def test_route_by_intent_five_outlets(intent, expect):
 def test_route_by_intent_unknown_defaults_business():
     assert route_by_intent({"intent": "火星语"}) == "business"
     assert route_by_intent({}) == "business"
+
+
+@pytest.mark.parametrize("query", [
+    "锂电池可以寄到美国吗", "汽油能不能走国际快递",
+    "粉末类物品能否寄运", "锂电池走特快到美国，费用和禁寄风险分别是什么",
+])
+def test_specific_item_precheck_reaches_business_tools(query):
+    assert route_by_intent({"intent": "禁限寄", "resolved_query": query}) == "business"
+
+
+def test_general_prohibited_policy_keeps_knowledge_gate():
+    assert route_by_intent({"intent": "禁限寄", "resolved_query": "国际禁限寄政策是什么"}) == "knowledge"
+
+
+def test_unspecified_other_reply_does_not_imply_verified_answer():
+    assert "无法确认" in SCRIPT_REPLY_OTHER
+    assert "请补充" in SCRIPT_REPLY_OTHER
 
 
 def test_intent_to_route_covers_nine_classes():

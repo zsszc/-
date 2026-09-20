@@ -21,10 +21,22 @@ INTENT_TO_ROUTE: dict[str, str] = {
     "订单": "business",
 }
 
+_ITEM_PRECHECK_TERMS = (
+    "能不能寄", "可以寄", "能否寄", "可不可以寄", "寄到", "寄运",
+    "国际快递", "禁寄风险", "限寄风险",
+)
+
+
+def intent_route(intent: str, query: str = "") -> str:
+    """明确物品寄运预检走工具；一般禁限寄政策仍走知识证据闸。"""
+    if intent == "禁限寄" and any(term in query for term in _ITEM_PRECHECK_TERMS):
+        return "business"
+    return INTENT_TO_ROUTE.get(intent, "business")
+
 
 def route_by_intent(state) -> str:
     """按意图分流;未知意图保守归 business(让 Agent 自己应对)。"""
-    return INTENT_TO_ROUTE.get(state.get("intent", ""), "business")
+    return intent_route(state.get("intent", ""), state.get("resolved_query", ""))
 
 
 def confidence_gate(state) -> str:

@@ -71,6 +71,64 @@ async def test_agent_tools_executes_normal_tool(monkeypatch, builtin_only_specs)
     assert not out.get("suggested_actions")
 
 
+@pytest.mark.parametrize("user_text,weight,expected", [
+    ("锂电池走特快到美国，费用和风险分别是什么", 1.0, False),
+    ("中国到美国0.8kg特快运费多少", 1.0, False),
+    ("中国到美国0.8kg特快运费多少", 0.8, True),
+    ("中国到美国800g特快运费多少", 0.8, True),
+    ("中国到美国半公斤特快运费多少", 0.5, True),
+])
+def test_fee_weight_must_match_user_wording(user_text, weight, expected):
+    state = {"resolved_query": "模型可能改写成 1kg", "messages": [HumanMessage(user_text)]}
+    assert nodes._weight_was_provided(state, weight) is expected
+
+
+def test_fee_weight_can_come_from_immediate_followup_but_not_stale_turn():
+    recent = {"messages": [HumanMessage("包裹重 1.5kg"), HumanMessage("那运费呢？")]}
+    assert nodes._weight_was_provided(recent, 1.5)
+    stale = {"messages": [HumanMessage("旧包裹重 1.5kg"), HumanMessage("再说另一票"),
+                          HumanMessage("新包裹到美国多少钱？")]}
+    assert not nodes._weight_was_provided(stale, 1.5)
+    new_weight = {"messages": [HumanMessage("上一票重 1.5kg"),
+                               HumanMessage("新包裹 0.8kg，到美国多少钱？")]}
+    assert nodes._weight_was_provided(new_weight, 0.8)
+    assert not nodes._weight_was_provided(new_weight, 1.5)
+
+
+@pytest.mark.asyncio
+async def test_fee_tool_fabricated_weight_is_blocked(monkeypatch, builtin_only_specs):
+    async def forbidden(*args, **kwargs):
+        raise AssertionError("缺重量时不得执行报价工具")
+
+    monkeypatch.setattr(nodes.engine, "execute_tool_call", forbidden)
+    ai = AIMessage("", tool_calls=[{"name": "estimate_shipping_fee", "id": "fee1",
+                                   "args": {"origin": "中国", "destination": "美国",
+                                            "weight_kg": 1, "transport_mode": "特快"}}])
+    out = await nodes.agent_tools({"messages": [HumanMessage("锂电池走特快到美国多少钱"), ai],
+                                   "conversation_id": 5})
+    assert out["messages"][0].status == "error"
+    assert "用户未提供" in out["messages"][0].content
+
+
+@pytest.mark.asyncio
+async def test_fee_tool_runs_with_confirmed_weight(monkeypatch, builtin_only_specs):
+    from langchain_core.messages import ToolMessage
+    from app.tools.engine import ToolRun
+
+    async def fake_exec(tc, cid, specs, **kw):
+        return ToolRun(tool_call_id=tc["id"], name=tc["name"], ok=True, status="成功",
+                       tool_message=ToolMessage(content='{"estimated_fee_cny": 100}',
+                                                tool_call_id=tc["id"], name=tc["name"]))
+
+    monkeypatch.setattr(nodes.engine, "execute_tool_call", fake_exec)
+    ai = AIMessage("", tool_calls=[{"name": "estimate_shipping_fee", "id": "fee2",
+                                   "args": {"origin": "中国", "destination": "美国",
+                                            "weight_kg": 0.8, "transport_mode": "特快"}}])
+    out = await nodes.agent_tools({"messages": [HumanMessage("中国到美国0.8kg特快运费多少"), ai],
+                                   "conversation_id": 5})
+    assert out["messages"][0].status != "error"
+
+
 @pytest.mark.asyncio
 async def test_agent_tools_create_ticket_missing_args_no_interrupt(monkeypatch, builtin_only_specs):
     """ch08:create_ticket 缺必填 → 不弹确认卡,交引擎按「校验拦下」回灌(模型据此追问用户)。

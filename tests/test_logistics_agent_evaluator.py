@@ -43,7 +43,7 @@ def test_limited_online_sample_is_category_balanced():
 @pytest.mark.asyncio
 async def test_online_report_checkpoints_and_resumes(monkeypatch, tmp_path):
     cases = load_cases()[:3]
-    report_path = tmp_path / "logistics_agent_eval_report_live_v2.json"
+    report_path = tmp_path / "logistics_agent_eval_report_live_v5.json"
     calls = 0
 
     async def interrupted(batch, base_url, concurrency):
@@ -78,7 +78,7 @@ async def test_online_report_checkpoints_and_resumes(monkeypatch, tmp_path):
 @pytest.mark.asyncio
 async def test_resume_rejects_different_target(monkeypatch, tmp_path):
     cases = load_cases()[:1]
-    path = tmp_path / "logistics_agent_eval_report_live_v2.json"
+    path = tmp_path / "logistics_agent_eval_report_live_v5.json"
     evaluator._checkpoint(path, cases, {}, "http://127.0.0.1:8000")
     with pytest.raises(ValueError, match="不一致"):
         await evaluator.evaluate_with_checkpoints(

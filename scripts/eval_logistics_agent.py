@@ -13,8 +13,8 @@ import httpx
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DATASET = ROOT / "data/evals/logistics_agent_eval.jsonl"
-DEFAULT_REPORT = ROOT / "data/evals/logistics_agent_eval_report_live_v3.json"
-EVAL_VERSION = 3
+DEFAULT_REPORT = ROOT / "data/evals/logistics_agent_eval_report_live_v5.json"
+EVAL_VERSION = 5
 EXPECTED_COUNTS = {
     "policy_process": 100,
     "cross_document": 70,

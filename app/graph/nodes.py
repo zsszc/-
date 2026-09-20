@@ -17,9 +17,10 @@ from app.core.prompts import (
     AGENT_SYSTEM, COMPLAINT_REPLY_TEXT, FALLBACK_REPLY_TEXT,
     REFUND_JUDGE_HINT, SCRIPT_REPLY_CHITCHAT, SCRIPT_REPLY_OTHER,
     SCRIPT_REPLY_OUT_OF_SCOPE, SHIPMENT_CLARIFICATION_REPLY,
+    SHIPMENT_CONTEXT_CLARIFICATION_REPLY,
 )
 from app.db import repository
-from app.graph.routing import INTENT_TO_ROUTE
+from app.graph.routing import intent_route
 from app.tools import business, engine, registry
 
 logger = logging.getLogger(__name__)
@@ -55,11 +56,38 @@ def _history_text(state, max_turns: int = 6) -> str:
 
 # 4+ 位连续数字视作订单号;用 lookaround 而非 \b——CJK 与数字同属 \w,\b 在「订单1001」处不成立
 _ORDER_RE = re.compile(r"(?<!\d)(\d{4,})(?!\d)")
+_WEIGHT_RE = re.compile(
+    r"(?<![A-Za-z0-9])(?P<amount>\d+(?:\.\d+)?|半|一|两|二|三|四|五|十)"
+    r"\s*(?P<unit>kg|公斤|千克|g|克)(?![A-Za-z])", re.IGNORECASE)
+_CHINESE_WEIGHTS = {"半": 0.5, "一": 1.0, "两": 2.0, "二": 2.0,
+                    "三": 3.0, "四": 4.0, "五": 5.0, "十": 10.0}
 
 
 def _extract_order_id(text: str) -> str | None:
     m = _ORDER_RE.search(text or "")
     return m.group(1) if m else None
+
+
+def _weight_was_provided(state, requested_weight) -> bool:
+    """只信用户最近两条原话里的重量，不信模型改写/工具参数自填的数字。"""
+    try:
+        requested = float(requested_weight)
+    except (TypeError, ValueError):
+        return False
+    human_texts = [m.content for m in state.get("messages", [])
+                   if isinstance(m, HumanMessage) and isinstance(m.content, str)]
+    # 本轮用户给了新重量时，以本轮为准；不能拿上一票的重量为新报价背书。
+    for text in reversed(human_texts[-2:]):
+        stated_weights = []
+        for match in _WEIGHT_RE.finditer(text):
+            raw = match.group("amount")
+            value = _CHINESE_WEIGHTS[raw] if raw in _CHINESE_WEIGHTS else float(raw)
+            if match.group("unit").lower() in {"g", "克"}:
+                value /= 1000
+            stated_weights.append(value)
+        if stated_weights:
+            return any(abs(requested - value) < 0.001 for value in stated_weights)
+    return False
 
 
 async def fetch_order(state) -> dict:
@@ -139,9 +167,11 @@ async def fallback_reply(state) -> dict:
     话术让用户「联系人工客服」,转人工按钮就得一并递给前端(actions 帧),不能光嘴上说。"""
     source = state.get("fallback_source") or "retrieval_low_conf"
     query = state.get("resolved_query") or _user_text(state)
-    needs_tracking = (not _extract_order_id(query)
-                      and any(word in query.lower() for word in ("sla", "超时", "超过", "时效"))
-                      and any(word in query for word in ("清关", "包裹", "运单", "物流")))
+    has_tracking = bool(re.search(r"[A-Za-z]{2,}\d{8,}|(?<!\d)\d{10,}(?!\d)", query))
+    sla_tracking = (any(word in query.lower() for word in ("sla", "超时", "超过", "时效"))
+                    and any(word in query for word in ("清关", "包裹", "运单", "物流")))
+    shipment_context = any(phrase in query for phrase in ("运单显示", "清关失败被退运", "这票货的当前", "当前节点"))
+    needs_tracking = not has_tracking and (sla_tracking or shipment_context)
     signals = state.get("trace", {}).get("confidence_signals") or {}
     reason = (f"evidence_confidence={state.get('evidence_confidence', 0.0):.3f} "
               f"signals={json.dumps(signals, ensure_ascii=False)}")
@@ -155,7 +185,8 @@ async def fallback_reply(state) -> dict:
         state.get("conversation_id"), _user_text(state), source, reason,
         retrieved_chunks=snapshot,
     )
-    return {"answer": SHIPMENT_CLARIFICATION_REPLY if needs_tracking else FALLBACK_REPLY,
+    clarification = SHIPMENT_CLARIFICATION_REPLY if sla_tracking else SHIPMENT_CONTEXT_CLARIFICATION_REPLY
+    return {"answer": clarification if needs_tracking else FALLBACK_REPLY,
             "suggested_actions": [{"type": "transfer_human"}],
             "trace": {"route": "fallback", "needs_tracking": needs_tracking}}
 
@@ -181,7 +212,7 @@ async def classify_intent(state) -> dict:
     query = state.get("resolved_query") or _user_text(state)
     r = await intent_mod.classify(query, _history_text(state))
     intent, conf = r["intent"], r["confidence"]
-    route = INTENT_TO_ROUTE.get(intent, "business")
+    route = intent_route(intent, query)
     tag_intent(intent, conf)   # ch09:意图进当前 trace 的 metadata+tag,Cost Control 按意图分堆
     return {"intent": intent, "intent_confidence": conf, "route": route,
             "trace": {"intent": intent, "intent_confidence": conf, "route": route}}
@@ -367,6 +398,12 @@ async def agent_tools(state) -> dict:
     actions = list(state.get("suggested_actions", []))
     not_owned = False        # 这一轮有没有人报了不属于自己的订单号
     for tc in last.tool_calls:
+        if tc["name"] == "estimate_shipping_fee" and not _weight_was_provided(
+                state, (tc.get("args") or {}).get("weight_kg")):
+            tool_msgs.append(ToolMessage(
+                content="本次报价已拦截：用户未提供与工具参数一致的包裹重量。请先询问重量（kg 或 g），不要使用本次模型自填参数或编造运费；禁限寄风险可以单独说明。",
+                tool_call_id=tc["id"], name="estimate_shipping_fee", status="error"))
+            continue
         if tc["name"] == "submit_refund":
             # submit_refund 在这里就被拦成前端表单、不进执行引擎,所以工具内那道归属校验
             # 对它不生效,得在拦截之前判一次。不然退款入口就成了绕过校验的后门。
