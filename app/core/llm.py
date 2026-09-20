@@ -91,6 +91,8 @@ def get_chat_model(streaming: bool = False, model: str | None = None,
         api_key=api_key,
         streaming=streaming,
         stream_usage=True,
+        timeout=60.0,
+        max_retries=1,
         max_tokens=settings.max_output_tokens,   # Y:保险丝,防模型失控输出
         temperature=0.3 if temperature is None else temperature,
         **thinking_kw,
@@ -142,7 +144,7 @@ def _thinking_kwargs() -> dict:
 # 结构化输出必须走非流式的模型族。两类上游的毛病正好相反:中转的非流式 OpenAI 兼容层会把
 # tool_calls 的 arguments 拼坏(所以 structured 默认开流式),下面这几个族反过来,流式下
 # 压根不吐 tool_calls,非流式才给。换模型踩到同样的坑,往这个元组里加一项。
-_NO_STREAM_TOOLCALL_FAMILIES: tuple[str, ...] = ("minimax",)
+_NO_STREAM_TOOLCALL_FAMILIES: tuple[str, ...] = ("minimax", "deepseek")
 
 
 def needs_non_streaming_tools(model: str | None = None, slot: str = "chat") -> bool:

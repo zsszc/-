@@ -10,9 +10,9 @@ help:  ## 列出带说明的目标
 	  | sed 's/:.*## /\t/' | sort | awk -F'\t' '{printf "  %-22s %s\n", $$1, $$2}'
 
 # ch09: Langfuse 自部署观测栈(web:3000 + worker + postgres + clickhouse + redis + minio)
-# -p 独立 project 名:不加会与主 compose 同落 mewhelp project,两边的 minio 服务同名相撞
+# -p 独立 project 名:兼容栈使用新数据卷，旧 26.8 异常数据卷仍保留但不启动
 langfuse-up:
-	docker compose -p mewhelp-langfuse -f docker-compose.langfuse.yml up -d
+	docker compose -p mewhelp-langfuse-compat -f docker-compose.langfuse.yml up -d
 	@echo "Langfuse 起中: http://localhost:3000 (admin@mewhelp.local / mewhelp123)"
 	@echo "首次就绪约 2-3 分钟;key 已 headless 预置,写 .env:"
 	@echo "  LANGFUSE_PUBLIC_KEY=pk-lf-mewhelp-local"
@@ -20,7 +20,7 @@ langfuse-up:
 	@echo "  LANGFUSE_BASE_URL=http://localhost:3000"
 
 langfuse-down:
-	docker compose -p mewhelp-langfuse -f docker-compose.langfuse.yml down
+	docker compose -p mewhelp-langfuse-compat -f docker-compose.langfuse.yml down
 
 calibrate-confidence:  ## ch09 置信度阈值校准(需 milvus + 上游可调通 + 知识库已建)
 	PYTHONPATH=. uv run python scripts/calibrate_confidence.py
@@ -31,8 +31,8 @@ flywheel:  ## ch09 飞轮批处理:问题池 → 标准化查重 → 待审队�
 flywheel-samples:  ## ch09 标准化查重 prompt 标注样例验证(通过率 ≥ 80%)
 	PYTHONPATH=. uv run python scripts/validate_flywheel_samples.py
 
-eval-flywheel:  ## ch09 评估流水线:复用 ch04 评估集,落 eval_runs 连趋势(TRIGGER=手动|定时)
-	PYTHONPATH=. uv run python scripts/eval_flywheel.py --triggered-by $(or $(TRIGGER),手动)
+eval-flywheel:  ## 物流检索趋势:30 条物流标注题 × hybrid_rerank,落 eval_runs
+	PYTHONPATH=. .venv/bin/python scripts/eval_logistics_trend.py --triggered-by $(or $(TRIGGER),手动)
 
 cost-report:  ## ch09 按意图 token 账(需 Langfuse 在跑;DAYS=窗口天数)
 	PYTHONPATH=. uv run python scripts/cost_by_intent.py --days $(or $(DAYS),7)
@@ -111,6 +111,9 @@ eval-check:  ## ch04 评估集自检(ground truth 可命中 + 要点逐字可查
 
 eval-rag:  ## 四策略评估(SKIP_GEN=1 只跑确定性两段,裁判上游挂了时用)
 	PYTHONPATH=. uv run python scripts/eval_ch04.py $(if $(SKIP_GEN),--skip-gen,)
+
+eval-logistics-retrieval:  ## 当前物流知识库四策略传统检索指标
+	PYTHONPATH=. .venv/bin/python scripts/eval_logistics_retrieval.py
 
 # 拿人工处置过的编造个案台账回头考裁判:改完裁判提示词跑这个,不必重跑整轮评估
 judge-check:  ## 忠实度裁判回归(重放台账个案的证据+答案,和人工处置对齐率)

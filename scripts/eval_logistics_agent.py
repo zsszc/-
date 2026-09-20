@@ -13,7 +13,8 @@ import httpx
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DATASET = ROOT / "data/evals/logistics_agent_eval.jsonl"
-DEFAULT_REPORT = ROOT / "data/evals/logistics_agent_eval_report_live.json"
+DEFAULT_REPORT = ROOT / "data/evals/logistics_agent_eval_report_live_v3.json"
+EVAL_VERSION = 3
 EXPECTED_COUNTS = {
     "policy_process": 100,
     "cross_document": 70,
@@ -129,6 +130,48 @@ def summarize(results: list[dict[str, Any]]) -> dict[str, Any]:
     return {"total": len(results), "passed": sum(item["passed"] for item in results), "pass_rate": round(sum(item["passed"] for item in results) / len(results), 4) if results else 0, "by_category": by_category}
 
 
+def _checkpoint(path: Path, cases: list[dict[str, Any]], results: dict[str, dict],
+                base_url: str) -> dict[str, Any]:
+    ordered = [results[case["id"]] for case in cases if case["id"] in results]
+    report = {
+        "eval_version": EVAL_VERSION, "dataset": str(DEFAULT_DATASET.relative_to(ROOT)),
+        "base_url": base_url, "target_total": len(cases),
+        "completed": len(ordered), "remaining": len(cases) - len(ordered),
+        "summary": summarize(ordered), "results": ordered,
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    tmp.replace(path)
+    return report
+
+
+async def evaluate_with_checkpoints(
+    cases: list[dict[str, Any]], base_url: str, report_path: Path, *,
+    concurrency: int, batch_size: int, resume: bool = False,
+    retry_failed: bool = False,
+) -> dict[str, Any]:
+    results: dict[str, dict] = {}
+    if resume and report_path.exists():
+        previous = json.loads(report_path.read_text(encoding="utf-8"))
+        if previous.get("eval_version") != EVAL_VERSION or previous.get("base_url") != base_url:
+            raise ValueError("评测版本或目标地址与断点报告不一致，拒绝混跑")
+        results = {row["id"]: row for row in previous.get("results", [])}
+    pending = [case for case in cases if case["id"] not in results or
+               (retry_failed and str(results[case["id"]].get("reason", "")).startswith("request_failed:"))]
+    report = _checkpoint(report_path, cases, results, base_url)
+    for start in range(0, len(pending), batch_size):
+        batch = pending[start:start + batch_size]
+        for row in await evaluate_live(batch, base_url, concurrency):
+            results[row["id"]] = row
+        report = _checkpoint(report_path, cases, results, base_url)
+        print(f"进度 {report['completed']}/{report['target_total']}，"
+              f"通过 {report['summary']['passed']}，"
+              f"请求失败 {sum(str(r.get('reason', '')).startswith('request_failed:') for r in report['results'])}",
+              flush=True)
+    return report
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
@@ -138,6 +181,9 @@ def main() -> None:
     parser.add_argument("--base-url", default=os.getenv("MEWHELP_EVAL_BASE", "http://127.0.0.1:8000"))
     parser.add_argument("--concurrency", type=int, default=1, help="在线请求并发数，默认串行以降低上游限流风险")
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
+    parser.add_argument("--batch-size", type=int, default=10)
+    parser.add_argument("--resume", action="store_true", help="从同版本、同目标地址的本地报告续跑")
+    parser.add_argument("--retry-failed", action="store_true", help="续跑时仅重试请求错误，不重试行为评分失败")
     args = parser.parse_args()
     if args.offline == args.live:
         parser.error("请二选一传入 --offline 或 --live")
@@ -149,11 +195,12 @@ def main() -> None:
         parser.error("--limit 不能为负数")
     if args.concurrency < 1:
         parser.error("--concurrency 必须大于 0")
+    if args.batch_size < 1:
+        parser.error("--batch-size 必须大于 0")
     selected = select_cases(cases, args.limit)
-    results = asyncio.run(evaluate_live(selected, args.base_url, args.concurrency))
-    report = {"dataset": str(args.dataset.relative_to(ROOT)), "base_url": args.base_url, "summary": summarize(results), "results": results}
-    args.report.parent.mkdir(parents=True, exist_ok=True)
-    args.report.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    report = asyncio.run(evaluate_with_checkpoints(
+        selected, args.base_url, args.report, concurrency=args.concurrency,
+        batch_size=args.batch_size, resume=args.resume, retry_failed=args.retry_failed))
     print(json.dumps(report["summary"], ensure_ascii=False, indent=2))
 
 

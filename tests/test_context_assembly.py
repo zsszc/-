@@ -21,7 +21,7 @@ def test_agent_messages_order_with_summary():
     放 system 里会把工具 schema 挤到可变内容之后,前缀缓存整段作废(实测 2048→0)。
     """
     ms = _agent_messages(_state(summary="用户问过订单1001", upto=0))
-    assert isinstance(ms[0], SystemMessage) and "小喵" in ms[0].content   # 人设红线打头
+    assert isinstance(ms[0], SystemMessage) and "运小助" in ms[0].content   # 物流人设红线打头
     assert sum(isinstance(m, SystemMessage) for m in ms) == 1            # 全列表只此一条
     assert isinstance(ms[1], HumanMessage)
     ctx = [m for m in ms if "订单1001" in (m.content or "")]

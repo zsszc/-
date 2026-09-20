@@ -2,6 +2,7 @@ import pytest
 from langchain_core.messages import AIMessage
 
 from app.config import settings
+from app.core.intent import INTENTS
 from app.graph.routing import (
     confidence_gate, route_by_intent, should_continue, INTENT_TO_ROUTE,
 )
@@ -11,8 +12,11 @@ from app.graph.routing import (
     ("投诉", "escalate"),
     ("闲聊", "fallback_script"),
     ("其他", "fallback_script"),
-    ("商品咨询", "knowledge"),
-    ("退款退货", "refund_flow"),
+    ("清关咨询", "knowledge"),
+    ("理赔", "knowledge"),
+    ("禁限寄", "knowledge"),
+    ("费用时效", "business"),
+    ("运单查询", "business"),
     ("售后", "refund_flow"),
     ("人工", "business"),
     ("物流", "business"),
@@ -28,8 +32,7 @@ def test_route_by_intent_unknown_defaults_business():
 
 
 def test_intent_to_route_covers_nine_classes():
-    assert set(INTENT_TO_ROUTE) == {
-        "投诉", "闲聊", "其他", "商品咨询", "退款退货", "售后", "人工", "物流", "订单"}
+    assert set(INTENTS) <= set(INTENT_TO_ROUTE)
 
 
 def test_confidence_gate():

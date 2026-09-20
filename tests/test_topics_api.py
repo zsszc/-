@@ -30,26 +30,26 @@ async def test_distribution_empty_returns_all_17(client):
 
 
 async def test_distribution_counts(client):
-    qid = await repository.insert_low_confidence(None, "猫窝买大了想退", "retrieval_low_conf", None)
+    qid = await repository.insert_low_confidence(None, "德国清关税费", "retrieval_low_conf", None)
     await repository.insert_topic_classifications(
-        [{"question_id": qid, "labels": ["尺码", "退换货"]}])
+        [{"question_id": qid, "labels": ["清关资料", "关税税费"]}])
     resp = await client.get("/api/topics/distribution")
     body = resp.json()
     by_label = {c["label"]: c for c in body["classes"]}
     assert body["total"] == 1
-    assert by_label["尺码"]["count"] == 1 and by_label["退换货"]["count"] == 1
-    assert by_label["物流"]["count"] == 0
+    assert by_label["清关资料"]["count"] == 1 and by_label["关税税费"]["count"] == 1
+    assert by_label["运单查询"]["count"] == 0
 
 
 async def test_distribution_samples_are_deduped(client):
     """归并后同一句标准化问法对应池里好几行:样例列表里只出现一次,计数照旧按条算。"""
     for _ in range(3):
-        qid = await repository.insert_low_confidence(None, "废砂盒多久倒", "retrieval_low_conf", None)
-        await repository.insert_topic_classifications([{"question_id": qid, "labels": ["商品信息"]}])
+        qid = await repository.insert_low_confidence(None, "德国清关需要哪些资料", "retrieval_low_conf", None)
+        await repository.insert_topic_classifications([{"question_id": qid, "labels": ["清关资料"]}])
 
     body = (await client.get("/api/topics/distribution")).json()
-    card = {c["label"]: c for c in body["classes"]}["商品信息"]
-    assert card["count"] == 3 and card["samples"] == ["废砂盒多久倒"]
+    card = {c["label"]: c for c in body["classes"]}["清关资料"]
+    assert card["count"] == 3 and card["samples"] == ["德国清关需要哪些资料"]
 
 
 async def _classify(text: str, labels: list[str]) -> int:
@@ -61,45 +61,45 @@ async def _classify(text: str, labels: list[str]) -> int:
 async def test_questions_paginates_within_one_class(client):
     """一类下的问题按页给:总数与页数都按这一类算,不是全表条数。"""
     for i in range(7):
-        await _classify(f"猫窝能不能机洗 {i}", ["商品信息"])
+        await _classify(f"德国清关资料补交问题 {i}", ["清关资料"])
 
-    body = (await client.get("/api/topics/questions?label=商品信息&size=3&page=2")).json()
+    body = (await client.get("/api/topics/questions?label=清关资料&size=3&page=2")).json()
     assert body["total"] == 7 and body["pages"] == 3 and body["page"] == 2
     assert len(body["items"]) == 3
-    tail = (await client.get("/api/topics/questions?label=商品信息&size=3&page=3")).json()
+    tail = (await client.get("/api/topics/questions?label=清关资料&size=3&page=3")).json()
     assert len(tail["items"]) == 1
 
 
 async def test_questions_of_multi_label_show_in_every_hit_class(client):
     """多标签问题在它命中的每个类目下都要出现,并带上同伴类目——和分布图的计数口径一致。"""
-    await _classify("猫窝买大了想退", ["尺码", "退换货"])
+    await _classify("德国清关税费", ["清关资料", "关税税费"])
 
-    for label in ("尺码", "退换货"):
+    for label in ("清关资料", "关税税费"):
         body = (await client.get(f"/api/topics/questions?label={label}")).json()
         assert body["total"] == 1
-        assert body["items"][0]["labels"] == ["尺码", "退换货"]
-        assert body["items"][0]["text"] == "猫窝买大了想退"
+        assert body["items"][0]["labels"] == ["清关资料", "关税税费"]
+        assert body["items"][0]["text"] == "德国清关税费"
 
 
 async def test_questions_falls_back_to_raw_when_not_merged(client):
     """没归并的问题没有标准化问法:显示原话,并标出这条还没进待审队列。"""
-    await _classify("那个猫窝啊到底能不能机洗啊", ["商品信息"])
+    await _classify("那个德国包裹啊到底要补什么资料", ["清关资料"])
 
-    item = (await client.get("/api/topics/questions?label=商品信息")).json()["items"][0]
-    assert item["text"] == "那个猫窝啊到底能不能机洗啊"
+    item = (await client.get("/api/topics/questions?label=清关资料")).json()["items"][0]
+    assert item["text"] == "那个德国包裹啊到底要补什么资料"
     assert item["normalized"] is False and item["review_status"] is None
     assert item["source"] == "retrieval_low_conf"
 
 
 async def test_questions_uses_normalized_text_after_merge(client):
     """归并过的显示标准化问法,原话另给一份:列表读起来是 FAQ 式短句,不是一堆口语。"""
-    qid = await _classify("那个猫窝啊到底能不能机洗啊", ["商品信息"])
-    rid = await repository.insert_review_item("猫窝能不能机洗", "分内胆与外套…")
+    qid = await _classify("那个德国包裹啊到底要补什么资料", ["清关资料"])
+    rid = await repository.insert_review_item("德国清关需要补交什么资料", "以承运商通知为准…")
     await repository.set_matched_review(qid, rid)
 
-    item = (await client.get("/api/topics/questions?label=商品信息")).json()["items"][0]
-    assert item["text"] == "猫窝能不能机洗" and item["normalized"] is True
-    assert item["raw_question"] == "那个猫窝啊到底能不能机洗啊"
+    item = (await client.get("/api/topics/questions?label=清关资料")).json()["items"][0]
+    assert item["text"] == "德国清关需要补交什么资料" and item["normalized"] is True
+    assert item["raw_question"] == "那个德国包裹啊到底要补什么资料"
     assert item["review_status"] == "待审"
 
 

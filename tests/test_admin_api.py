@@ -1,11 +1,11 @@
-"""后台首页聚合 API:六张卡齐出,某一块依赖没起只让它自己那张卡显示读数失败,不连坐整页。"""
+"""后台首页聚合 API:七张卡齐出,某一块依赖没起只让它自己那张卡显示降级。"""
 import pytest
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
 from app.api import admin as admin_api
 
-CARDS = ("kb", "rageval", "review", "observability", "topics", "classifier", "agent-eval")
+CARDS = ("operations", "kb", "agent-eval", "rageval", "observability", "review", "topics")
 
 
 @pytest.fixture
@@ -38,7 +38,7 @@ async def test_all_deps_down_still_returns_every_card(client, monkeypatch):
 
     body = (await client.get("/api/admin/overview")).json()
     assert [m["key"] for m in body["modules"]] == list(CARDS)
-    for key in ("kb", "review", "topics", "observability"):
+    for key in ("kb", "review", "topics"):
         m = {c["key"]: c for c in body["modules"]}[key]
         assert m["status"] == "error" and "mysql 没起" in m["note"]
 

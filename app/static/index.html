@@ -465,6 +465,61 @@
     }
     #exception-result { display: none; margin: 8px 0 0; padding: 9px 12px; border: 3px solid var(--ink); background: #fff; font-size: 11px; line-height: 1.6; }
     .foot-note { text-align: center; color: var(--muted); font-size: 11px; margin: 10px 0 0; letter-spacing: .3px; }
+
+    /* 与运营控制台保持同一套轻量、圆角的视觉语言。 */
+    .avatar.sm { box-shadow: var(--shadow-sm); }
+    .bubble {
+      border-width: 1px;
+      border-color: rgba(22, 50, 79, .14);
+      border-radius: 16px;
+    }
+    .row.bot .bubble { box-shadow: var(--shadow); }
+    .row.user .bubble {
+      border-color: transparent;
+      border-bottom-right-radius: 5px;
+    }
+    #new-chat, #shipment-query, #exception-classify, #ticket-draft {
+      border: 0;
+      border-radius: 10px;
+      box-shadow: none;
+      padding: 8px 11px;
+    }
+    #new-chat { background: var(--ink); color: #fff; }
+    #shipment-query, #exception-classify, #ticket-draft { background: var(--cream); }
+    #send { border: 0; box-shadow: none; }
+    #send:hover:not(:disabled) { background: #125b96; }
+    footer {
+      border-top: 1px solid rgba(22, 50, 79, .12);
+      background: rgba(247, 243, 235, .94);
+    }
+    .feedback-btn, .action-btn {
+      border-width: 1px;
+      border-radius: 10px;
+      box-shadow: none;
+    }
+    .chip, .fb-btn, .order-card,
+    .modal-actions button,
+    .ticket-field select,
+    .ticket-field textarea,
+    .ticket-field input {
+      border-width: 1px;
+      border-color: rgba(22, 50, 79, .18);
+      border-radius: 10px;
+      box-shadow: none;
+    }
+    .chip { background: rgba(255, 255, 255, .82); }
+    .chip:hover { border-color: rgba(30, 126, 116, .42); }
+    .dot-online { border: 0; border-radius: 50%; }
+    .cite-pop {
+      border-width: 1px;
+      border-color: rgba(22, 50, 79, .18);
+      border-radius: 14px;
+    }
+    .ticket-confirm, #exception-result {
+      border-width: 1px;
+      border-radius: 13px;
+      box-shadow: var(--shadow-sm);
+    }
   </style>
 </head>
 <body>
@@ -536,27 +591,27 @@
 
   <div class="modal-mask" id="refundMask">
     <div class="ticket-modal" role="dialog" aria-modal="true" aria-labelledby="refundTitle">
-      <h3 id="refundTitle">提交物流申请</h3>
-      <p class="sub">确认运单与事项后提交，运小助会为您登记申请</p>
+      <h3 id="refundTitle">提交退运或理赔申请</h3>
+      <p class="sub">确认业务单与申请事项后提交，运小助会为您登记并转交运营人员</p>
       <div class="ticket-field">
-        <label for="refundOrder">运单号</label>
+        <label for="refundOrder">业务单号</label>
         <input id="refundOrder" type="text" readonly />
       </div>
       <div class="ticket-field">
-        <label for="refundReason">退款原因 <span class="req">*</span></label>
+        <label for="refundReason">申请事项 <span class="req">*</span></label>
         <select id="refundReason">
-          <option value="" disabled selected>请选择退款原因…</option>
-          <option value="七天无理由">七天无理由</option>
-          <option value="质量问题">质量问题</option>
-          <option value="发错货">发错货</option>
-          <option value="不想要了">不想要了</option>
+          <option value="" disabled selected>请选择申请事项…</option>
+          <option value="运输异常退运">运输异常退运</option>
+          <option value="清关失败退运">清关失败退运</option>
+          <option value="包裹破损理赔">包裹破损理赔</option>
+          <option value="取消运输委托">取消运输委托</option>
           <option value="其他">其他</option>
         </select>
       </div>
       <div class="ticket-err" id="refundErr"></div>
       <div class="modal-actions">
         <button type="button" class="cancel" id="refundCancel">取消</button>
-        <button type="button" class="submit" id="refundSubmit">提交退款</button>
+        <button type="button" class="submit" id="refundSubmit">提交申请</button>
       </div>
     </div>
   </div>
@@ -869,10 +924,10 @@
           btn.textContent = "转人工";
           btn.addEventListener("click", () => {
             btn.disabled = true;
-            // 纯前端模拟:显示已转接 + 客服小猫问候(本章不接真人系统)
+            // 演示环境不接真实坐席系统，仅展示人工接入后的状态。
             const sys = addRow("bot"); sys.textContent = "已转接人工客服";
             const greet = addRow("bot");
-            greet.textContent = "您好,我是客服小猫,请问有什么可以帮您的";
+            greet.textContent = "您好，我是跨境物流人工客服，请问有什么可以帮您？";
             messagesEl.scrollTop = messagesEl.scrollHeight;
           });
         } else if (a.type === "create_ticket") {
@@ -880,8 +935,8 @@
           // 点「建工单」不再直接建单,而是弹出工单表单让用户选类别+填描述再提交
           btn.addEventListener("click", () => openTicketModal(btn));
         } else if (a.type === "refund_form") {
-          btn.textContent = "提交退款工单";
-          // ch06:能退时 Agent 调 submit_refund 被拦成此动作,点开退款表单(订单号只读+原因下拉)
+          btn.textContent = "提交退运/理赔申请";
+          // 后端沿用兼容接口，前端按跨境物流业务展示退运与理赔申请。
           btn.addEventListener("click", () => openRefundModal(btn, a.draft || {}));
         }
         bar.appendChild(btn);
@@ -970,7 +1025,7 @@
       refundReason.value = "";
       refundErr.textContent = "";
       refundSubmit.disabled = false;
-      refundSubmit.textContent = "提交退款";
+      refundSubmit.textContent = "提交申请";
       refundMask.classList.add("open");
     }
     function closeRefundModal() { refundMask.classList.remove("open"); refundTriggerBtn = null; }
@@ -981,7 +1036,7 @@
     });
     refundSubmit.addEventListener("click", async () => {
       const reason = refundReason.value;
-      if (!reason) { refundErr.textContent = "请选择退款原因"; return; }
+      if (!reason) { refundErr.textContent = "请选择申请事项"; return; }
       refundErr.textContent = "";
       refundSubmit.disabled = true;
       refundSubmit.textContent = "提交中…";
@@ -995,17 +1050,17 @@
         if (resp.ok) {
           if (refundTriggerBtn) refundTriggerBtn.disabled = true;
           closeRefundModal();
-          addRow("bot").textContent = "退款申请已提交:" + data.ticket_no;
+          addRow("bot").textContent = "物流申请已提交：" + data.ticket_no;
           messagesEl.scrollTop = messagesEl.scrollHeight;
         } else {
-          refundErr.textContent = "退款提交失败,请稍后重试";
+          refundErr.textContent = "申请提交失败，请稍后重试";
           refundSubmit.disabled = false;
-          refundSubmit.textContent = "提交退款";
+          refundSubmit.textContent = "提交申请";
         }
       } catch (e) {
-        refundErr.textContent = "退款提交失败,请稍后重试";
+        refundErr.textContent = "申请提交失败，请稍后重试";
         refundSubmit.disabled = false;
-        refundSubmit.textContent = "提交退款";
+        refundSubmit.textContent = "提交申请";
       }
     });
 
@@ -1015,7 +1070,7 @@
     function renderOrderCards(bubble, orders, onPick) {
       const intro = document.createElement("div");
       intro.className = "bubble-text";
-      intro.textContent = orders.length ? "请选择您要处理的订单:" : "没有查到可选订单,请直接提供订单号。";
+      intro.textContent = orders.length ? "请选择您要处理的业务单：" : "没有查到可选业务单，请直接提供业务单号。";
       bubble.appendChild(intro);
       const wrap = document.createElement("div");
       wrap.className = "order-cards";
@@ -1024,7 +1079,7 @@
         card.type = "button";
         card.className = "order-card";
         card.innerHTML =
-          '<div class="oc-top">订单 ' + o.order_id + '</div>' +
+          '<div class="oc-top">业务单 ' + o.order_id + '</div>' +
           '<div class="oc-mid">' + (o.product || "") + '</div>' +
           '<div class="oc-bot">' + (o.status || "") + ' · ¥' + (o.amount ?? "") + '</div>';
         card.addEventListener("click", async () => {
@@ -1040,7 +1095,7 @@
 
     // ch06:点完续跑图(有 interrupt 挂着)
     async function pickThenResume(o) {
-      addRow("user").textContent = "选择订单 " + o.order_id;
+      addRow("user").textContent = "选择业务单 " + o.order_id;
       const nb = addRow("bot");
       setBusy(true);
       try {
@@ -1058,7 +1113,7 @@
 
     // ch08:归属校验拒绝之后给的出路。这轮已经答完了,没有图等着续跑,所以走正常发消息那条路
     async function pickThenAsk(o) {
-      await send("查一下订单 " + o.order_id);
+      await send("查询业务单 " + o.order_id);
     }
 
     // ---------- ch08:工单预览确认卡(interrupt confirm_ticket → 确认提交/取消 → resume 续跑)----------
@@ -1109,7 +1164,14 @@
 
     // 读一条 SSE 流,按帧分发到 on.{delta,tool,citations,actions,interrupt};done 存 conversation_id;event: error 抛错
     async function readSSEStream(resp, on) {
-      if (!resp.ok || !resp.body) throw new Error("bad response");
+      if (!resp.ok || !resp.body) {
+        let message = `请求失败（HTTP ${resp.status}）`;
+        try {
+          const body = await resp.json();
+          if (body.detail) message = body.detail;
+        } catch (_) { /* 非 JSON 错误保留状态码 */ }
+        throw new Error(message);
+      }
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -1120,12 +1182,14 @@
         const frames = buffer.split("\n\n");
         buffer = frames.pop() ?? "";
         for (const frame of frames) {
-          if (frame.startsWith("event: error")) throw new Error("stream error");
           const line = frame.split("\n").find((l) => l.startsWith("data: "));
           if (!line) continue;
           const payload = line.slice(6);
           if (payload === "[DONE]") return;
           const data = JSON.parse(payload);
+          if (frame.startsWith("event: error")) {
+            throw new Error(data.message || "模型服务暂时不可用");
+          }
           if (data.event === "tool") on.tool && on.tool(data.name);
           else if (data.event === "citations") on.citations && on.citations(data.items || []);
           else if (data.event === "interrupt") {
@@ -1207,7 +1271,7 @@
         }));
       } catch (err) {
         bubble.className = "bubble error";
-        bubble.textContent = "回复失败,请稍后重试";
+        bubble.textContent = err.message || "回复失败，请稍后重试";
       } finally {
         setBusy(false);
         loadConversations();   // ch07:每轮后刷新侧栏(新会话入列/摘要标记更新)

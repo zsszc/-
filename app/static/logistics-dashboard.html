@@ -1,4 +1,74 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>航迹云 · 运营概览</title>
-<style>body{margin:0;background:#d9edf2;color:#16324f;font:14px ui-sans-serif,system-ui,"PingFang SC",sans-serif}.wrap{max-width:980px;margin:40px auto;padding:34px;background:rgba(255,255,255,.92);border:1px solid rgba(22,50,79,.14);border-radius:24px;box-shadow:0 18px 45px rgba(22,50,79,.2)}.top{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #c9e6e4;padding-bottom:22px}.brand{font-size:25px;font-weight:850;letter-spacing:-.5px}.back{color:#1769aa;border:1px solid #b8d9df;border-radius:10px;padding:9px 13px;text-decoration:none;font-weight:700}.back:hover{background:#d7f5ee}.eyebrow{display:inline-block;margin-top:8px;padding:4px 8px;border-radius:999px;background:#d7f5ee;color:#1769aa;font-size:11px;font-weight:800}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin:26px 0}.card{border:1px solid #c9dce6;border-radius:16px;padding:18px;background:linear-gradient(145deg,#fff,#eef8fa);box-shadow:0 5px 14px rgba(22,50,79,.08)}.num{font-size:31px;font-weight:850;color:#1769aa;margin:10px 0 4px}.label{color:#71879a;font-size:12px;font-weight:700}.section-title{display:flex;align-items:center;gap:10px;margin:30px 0 14px}.section-title h3{margin:0}.section-title span{font-size:11px;color:#71879a}.list{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.item{border:1px solid #c9dce6;border-left:5px solid #58c7c4;border-radius:12px;background:#fff;padding:14px;font-weight:700}.note{color:#71879a;font-size:12px;margin-top:28px;padding-top:16px;border-top:1px dashed #b8d9df}@media(max-width:600px){.wrap{margin:0;min-height:100vh;box-sizing:border-box;border-width:0;border-radius:0;box-shadow:none;padding:24px 18px}.top{align-items:flex-start}.brand{font-size:20px}.grid{grid-template-columns:repeat(2,1fr);gap:10px}.card{padding:13px}.num{font-size:25px}}</style></head>
-<body><main class="wrap"><div class="top"><div><div class="brand">航迹云 · 运营概览</div><div class="label">GLOBAL LOGISTICS CONTROL ROOM</div><div class="eyebrow">● 本地演示环境</div></div><a class="back" href="/">返回聊天</a></div><section id="metrics" class="grid"></section><div class="section-title"><h3>物流运营</h3><span>OPERATIONS SIGNALS</span></div><section id="operations" class="grid"></section><div class="section-title"><h3>异常与承运商</h3><span>QUALITY MONITORING</span></div><section id="breakdown" class="list"></section><div class="section-title"><h3>已启用能力</h3><span>AGENT TOOLCHAIN</span></div><section id="capabilities" class="list"></section><p class="note">当前指标为本地演示项目状态，不代表真实生产运营数据。</p></main>
-<script>const labels={knowledge_sources:"知识库材料",regression_cases:"回归样例",logistics_topics:"物流主题",registered_tools:"核心工具"};const card=(label,value)=>`<div class="card"><div class="label">${label}</div><div class="num">${value}</div></div>`;fetch("/api/logistics/overview").then(r=>r.json()).then(d=>{const m=d.metrics,o=d.operations;document.querySelector("#metrics").innerHTML=Object.entries(labels).map(([k,v])=>card(v,m[k])).join("")+card("Milvus 状态",m.milvus.status==="ready"?m.milvus.count:"—");document.querySelector("#operations").innerHTML=card("演示运单",o.shipment_total)+card("人工转接率",`${Math.round(o.human_handoff_rate*100)}%`)+Object.entries(o.status_distribution).map(([k,v])=>card(k,v)).join("");document.querySelector("#breakdown").innerHTML=Object.entries(o.carrier_summary).map(([k,v])=>`<div class="item">${k} · ${v.shipments} 票 · 当前履约 ${Math.round(v.on_track/v.shipments*100)}%</div>`).join("")+(Object.keys(o.exception_distribution).length?Object.entries(o.exception_distribution).map(([k,v])=>`<div class="item">异常 · ${k} · ${v} 票</div>`).join(""):"<div class="item">✓ 当前演示样本暂无异常标记</div>");document.querySelector("#capabilities").innerHTML=d.capabilities.map(x=>`<div class="item">✓ ${x}</div>`).join("")}).catch(()=>{document.querySelector("#metrics").textContent="概览暂时无法加载，请检查本地服务。"})</script></body></html>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>航迹云 · 运单态势</title>
+  <style>
+    body { margin: 0; color: #16324f; font: 14px ui-monospace, "SF Mono", "PingFang SC", monospace; }
+    .wrap { max-width: 1180px; margin: 0 auto; }
+    .topbar .eyebrow { color: #1769aa; font-size: 11px; font-weight: 800; letter-spacing: .08em; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin: 18px 0; }
+    .metric { border: 1px solid #d2e1e8; border-radius: 16px; padding: 18px; background: #fff; box-shadow: 0 8px 20px rgba(22,50,79,.08); }
+    .metric .num { margin: 8px 0 2px; color: #1769aa; font-size: 30px; font-weight: 850; }
+    .label { color: #71879a; font-size: 12px; font-weight: 700; }
+    .section-title { display: flex; align-items: center; gap: 10px; margin: 28px 0 12px; }
+    .section-title h2 { margin: 0; font-size: 16px; }
+    .section-title span { color: #71879a; font-size: 11px; }
+    .list { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+    .item { border: 1px solid #d2e1e8; border-left: 4px solid #58c7c4; border-radius: 13px; background: #fff; padding: 14px; font-weight: 700; }
+    .note { margin-top: 28px; color: #71879a; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="topbar">
+      <div>
+        <div class="eyebrow">GLOBAL LOGISTICS CONTROL ROOM</div>
+        <h1>运单态势</h1>
+        <span class="sub">运输节点、承运商履约、异常分布与 Agent 工具能力</span>
+      </div>
+      <span class="spacer"></span>
+      <button class="btn" id="refresh">刷新</button>
+    </div>
+    <section id="metrics" class="grid"></section>
+    <div class="section-title"><h2>物流运营</h2><span>OPERATIONS SIGNALS</span></div>
+    <section id="operations" class="grid"></section>
+    <div class="section-title"><h2>异常与承运商</h2><span>QUALITY MONITORING</span></div>
+    <section id="breakdown" class="list"></section>
+    <div class="section-title"><h2>已启用能力</h2><span>AGENT TOOLCHAIN</span></div>
+    <section id="capabilities" class="list"></section>
+    <p class="note">当前指标来自可复现的本地演示数据，不代表真实生产运营数据。</p>
+  </main>
+  <script src="/static/admin.js"></script>
+  <script>
+    mountAdminNav("/logistics-dashboard");
+    const labels = { knowledge_sources: "知识库材料", regression_cases: "回归样例", logistics_topics: "物流主题", registered_tools: "核心工具" };
+    const card = (label, value) => `<div class="metric"><div class="label">${label}</div><div class="num">${value}</div></div>`;
+    async function load() {
+      try {
+        const response = await fetch("/api/logistics/overview");
+        if (!response.ok) throw new Error("概览接口不可用");
+        const data = await response.json();
+        const metrics = data.metrics, operations = data.operations;
+        document.querySelector("#metrics").innerHTML = Object.entries(labels).map(([key, label]) => card(label, metrics[key])).join("")
+          + card("Milvus 知识块", metrics.milvus.status === "ready" ? metrics.milvus.count : "—");
+        document.querySelector("#operations").innerHTML = card("演示运单", operations.shipment_total)
+          + card("人工转接率", `${Math.round(operations.human_handoff_rate * 100)}%`)
+          + Object.entries(operations.status_distribution).map(([key, value]) => card(key, value)).join("");
+        const carriers = Object.entries(operations.carrier_summary).map(([key, value]) =>
+          `<div class="item">${key} · ${value.shipments} 票 · 当前履约 ${Math.round(value.on_track / value.shipments * 100)}%</div>`).join("");
+        const exceptions = Object.keys(operations.exception_distribution).length
+          ? Object.entries(operations.exception_distribution).map(([key, value]) => `<div class="item">异常 · ${key} · ${value} 票</div>`).join("")
+          : "<div class=\"item\">✓ 当前演示样本暂无异常标记</div>";
+        document.querySelector("#breakdown").innerHTML = carriers + exceptions;
+        document.querySelector("#capabilities").innerHTML = data.capabilities.map((name) => `<div class="item">✓ ${name}</div>`).join("");
+      } catch (error) {
+        document.querySelector("#metrics").innerHTML = `<div class="item">${error.message}</div>`;
+      }
+    }
+    document.querySelector("#refresh").addEventListener("click", load);
+    load();
+  </script>
+</body>
+</html>

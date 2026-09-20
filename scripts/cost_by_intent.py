@@ -25,6 +25,12 @@ _ROOT = pathlib.Path(__file__).resolve().parent.parent
 _OUT_DIR = _ROOT / "data/ch09/reports"
 _OUT = _OUT_DIR / "cost_by_intent.txt"
 _OUT_JSON = _OUT_DIR / "cost_by_intent.json"
+_MIN_READ_NOTE_REQUESTS = 5
+
+
+def _should_generate_read_note(rows: list[dict]) -> bool:
+    """小样本只展示客观统计，避免模型据一两次请求推断业务趋势。"""
+    return sum(row["count"] for row in rows) >= _MIN_READ_NOTE_REQUESTS
 
 
 def _window(days: int) -> tuple[str, str]:
@@ -92,7 +98,7 @@ def main() -> int:
     lines = [f"=== 按意图 token 花销(近 {args.days} 天,数据源 Langfuse)===",
              f"{'意图':6s} {'请求数':>8s} {'总tokens':>12s} {'平均tokens':>12s} {'占比':>7s}"]
     for i, r in enumerate(rows):
-        mark = "  ← 最烧钱" if i == 0 else ""
+        mark = "  ← token 最多" if i == 0 else ""
         lines.append(f"{r['intent']:6s} {r['count']:>8d} {r['tokens']:>12,d} "
                      f"{r['avg_tokens']:>12,d} {r['share']:>6.0%}{mark}")
     if not rows:
@@ -107,7 +113,8 @@ def main() -> int:
                            "单均 token": r["avg_tokens"], "占比": r["share"]} for r in rows],
                "总 token": sum(r["tokens"] for r in rows),
                "总请求数": sum(r["count"] for r in rows)}
-    note = asyncio.run(read_notes.generate("cost_by_intent", payload)) if rows else None
+    note = (asyncio.run(read_notes.generate("cost_by_intent", payload))
+            if _should_generate_read_note(rows) else None)
     print("\n读图小注:" + (note if note else "本轮没有(页面用兜底句)"))
 
     _OUT_DIR.mkdir(parents=True, exist_ok=True)

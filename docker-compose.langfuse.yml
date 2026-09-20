@@ -1,16 +1,17 @@
 # =============================================================
-# ch09 · Langfuse 自部署观测栈(独立于主 compose,数据不出门)
+# MewHelp · Langfuse 自部署观测栈（独立于主 compose，数据留在本机）
 # 起停:make langfuse-up / make langfuse-down;界面 http://localhost:3000
-# 基于官方 langfuse/langfuse docker-compose.yml,本仓库改动三处:
+# 基于官方 langfuse/langfuse docker-compose.yml,本仓库的本地化改动:
 #   1) LANGFUSE_INIT_* 填了默认值——headless 初始化,起来即有组织/项目/固定 key,免手工点界面
 #   2) minio 宿主端口 9091 → 9191(9091 被主 compose 的 milvus healthz 占用)
-#   3) 本机教学环境,CHANGEME 密钥保持默认;对外部署前必须全部换掉
+#   3) 本地开发环境使用默认密钥；对外部署前必须全部替换
+#   4) Langfuse PostgreSQL 连接使用独立的 LANGFUSE_DATABASE_URL，避免主项目 MySQL 配置覆盖
+#   5) ClickHouse 固定为 25.12，避免浮动版本带来的时间戳异常
+#   6) Web 与 MinIO 端口仅绑定本机，开发默认密钥不可暴露到局域网
 # =============================================================
 # Make sure to update the credential placeholders with your own secrets.
 # We mark them with # CHANGEME in the file below.
-# In addition, we recommend to restrict inbound traffic on the host to langfuse-web (port 3000) and minio (port 9090) only.
-# All other components are bound to localhost (127.0.0.1) to only accept connections from the local machine.
-# External connections from other machines will not be able to reach these services directly.
+# 本地开发栈全部端口仅绑定 localhost；远程部署前另行配置反向代理与安全密钥。
 services:
   langfuse-worker:
     image: docker.io/langfuse/langfuse-worker:3
@@ -28,7 +29,8 @@ services:
       - 127.0.0.1:3030:3030
     environment: &langfuse-worker-env
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
-      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/postgres} # CHANGEME
+      # 主应用也使用 DATABASE_URL（MySQL），因此 Langfuse 使用独立变量，避免被项目 .env 覆盖。
+      DATABASE_URL: ${LANGFUSE_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/postgres} # CHANGEME
       SALT: ${SALT:-mysalt} # CHANGEME
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000} # CHANGEME: generate via `openssl rand -hex 32`
       TELEMETRY_ENABLED: ${TELEMETRY_ENABLED:-false}   # 本章立场「数据不出门」,遥测一并关掉
@@ -52,7 +54,7 @@ services:
       LANGFUSE_S3_MEDIA_UPLOAD_REGION: ${LANGFUSE_S3_MEDIA_UPLOAD_REGION:-auto}
       LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID:-minio}
       LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY:-miniosecret} # CHANGEME
-      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: ${LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT:-http://localhost:9090}
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: ${LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT:-http://localhost:9190}
       LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: ${LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE:-true}
       LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: ${LANGFUSE_S3_MEDIA_UPLOAD_PREFIX:-media/}
       LANGFUSE_S3_BATCH_EXPORT_ENABLED: ${LANGFUSE_S3_BATCH_EXPORT_ENABLED:-false}
@@ -60,7 +62,7 @@ services:
       LANGFUSE_S3_BATCH_EXPORT_PREFIX: ${LANGFUSE_S3_BATCH_EXPORT_PREFIX:-exports/}
       LANGFUSE_S3_BATCH_EXPORT_REGION: ${LANGFUSE_S3_BATCH_EXPORT_REGION:-auto}
       LANGFUSE_S3_BATCH_EXPORT_ENDPOINT: ${LANGFUSE_S3_BATCH_EXPORT_ENDPOINT:-http://minio:9000}
-      LANGFUSE_S3_BATCH_EXPORT_EXTERNAL_ENDPOINT: ${LANGFUSE_S3_BATCH_EXPORT_EXTERNAL_ENDPOINT:-http://localhost:9090}
+      LANGFUSE_S3_BATCH_EXPORT_EXTERNAL_ENDPOINT: ${LANGFUSE_S3_BATCH_EXPORT_EXTERNAL_ENDPOINT:-http://localhost:9190}
       LANGFUSE_S3_BATCH_EXPORT_ACCESS_KEY_ID: ${LANGFUSE_S3_BATCH_EXPORT_ACCESS_KEY_ID:-minio}
       LANGFUSE_S3_BATCH_EXPORT_SECRET_ACCESS_KEY: ${LANGFUSE_S3_BATCH_EXPORT_SECRET_ACCESS_KEY:-miniosecret} # CHANGEME
       LANGFUSE_S3_BATCH_EXPORT_FORCE_PATH_STYLE: ${LANGFUSE_S3_BATCH_EXPORT_FORCE_PATH_STYLE:-true}
@@ -82,7 +84,7 @@ services:
     restart: always
     depends_on: *langfuse-depends-on
     ports:
-      - 3000:3000
+      - 127.0.0.1:3000:3000
     environment:
       <<: *langfuse-worker-env
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-mysecret} # CHANGEME
@@ -97,7 +99,8 @@ services:
       LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_INIT_USER_PASSWORD:-mewhelp123}
 
   clickhouse:
-    image: docker.io/clickhouse/clickhouse-server
+    # 固定官方兼容版本；浮动 latest 曾拉到 26.8 并把毫秒时间戳写成 9999 年。
+    image: docker.io/clickhouse/clickhouse-server:25.12
     restart: always
     user: "101:101"
     environment:
@@ -127,7 +130,7 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-miniosecret} # CHANGEME
     ports:
-      - 9090:9000
+      - 127.0.0.1:9190:9000   # 9090 被本机 WPS Office 占用
       - 127.0.0.1:9191:9001   # 原 9091,让位给主 compose 的 milvus healthz
     volumes:
       - langfuse_minio_data:/data

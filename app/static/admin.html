@@ -37,16 +37,15 @@
 <body>
   <div class="wrap">
     <div class="topbar">
-      <h1>后台管理</h1>
-      <span class="sub">知识库、检索评估、飞轮、分类器，几块后台都在这里，不用回终端</span>
+      <h1>跨境物流运营控制台</h1>
+      <span class="sub">统一查看运单态势、知识质量、Agent 评测与失败复盘</span>
       <span class="spacer"></span>
       <button class="btn" id="refreshBtn">刷新</button>
     </div>
 
     <div class="tip">
-      口径：<b>正常</b>这块是活的且没有待办；<b>要干活</b>有待办或两边数对不上；
-      <b>没数据</b>还没跑过，进去按一下就有；<b>读数失败</b>这块的依赖没起（mysql / Milvus /
-      嵌入上游 / 分类器 :8110），只影响它自己那张卡。
+      状态口径：<b>正常</b>表示模块可用且数据一致；<b>要处理</b>表示存在待办或依赖降级；
+      <b>暂无数据</b>表示还没有积累到样本；<b>读取失败</b>只影响对应模块，不会拖垮整个控制台。
     </div>
 
     <div class="mods" id="mods"><div class="miss">加载中…</div></div>
@@ -56,7 +55,7 @@
   <script src="/static/admin.js"></script>
   <script src="/static/acceptance.js"></script>
   <script>
-    const LABEL = { ok: "正常", attention: "要干活", missing: "没数据", error: "读数失败" };
+    const LABEL = { ok: "正常", attention: "要处理", missing: "暂无数据", error: "读取失败" };
 
     function card(m) {
       const box = el("div", "mod " + m.status);

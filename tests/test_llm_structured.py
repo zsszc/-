@@ -155,12 +155,14 @@ def test_flagged_family_forces_non_streaming(monkeypatch):
     """
     seen = {}
 
-    def fake_get_chat_model(streaming=False, model=None, temperature=None, slot="chat"):
+    def fake_get_chat_model(streaming=False, model=None, temperature=None, slot="chat",
+                            thinking=True):
         seen["streaming"] = streaming
         raise RuntimeError("stop-here")      # 拿到参数就够,不真建模型
 
     monkeypatch.setattr(llm, "get_chat_model", fake_get_chat_model)
-    for name, expect in (("MiniMax-M3", False), ("deepseek-ai/DeepSeek-V4-Flash", True)):
+    for name, expect in (("MiniMax-M3", False), ("deepseek-ai/DeepSeek-V4-Flash", False),
+                         ("gpt-5.5", True)):
         seen.clear()
         with pytest.raises(RuntimeError):
             llm.structured(_Check, model=name)

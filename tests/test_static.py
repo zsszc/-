@@ -23,20 +23,31 @@ def test_admin_pages_are_reachable():
         ("/kb", "/api/kb/overview"),
         ("/rag-eval", "/api/rag-eval/overview"),
         ("/review", "/api/review/queue"),
-        ("/observability", "/api/observability/overview"),
         ("/topics", "/api/topics/distribution"),
         ("/topics/questions", "/api/topics/questions"),
-        ("/acceptance", "/api/acceptance/overview"),
-        ("/acceptance/eval", "/api/acceptance/eval"),
-        ("/acceptance/data", "/api/acceptance/data"),
-        ("/acceptance/errors", "/api/acceptance/errors"),
+        ("/agent-eval", "/api/agent-eval/overview"),
+        ("/observability", "/api/observability/overview"),
     ):
         resp = client.get(path)
         assert resp.status_code == 200, path
         assert marker in resp.text, path
         assert "/static/admin.js" in resp.text, path    # 后台导航一份共用
-    for asset in ("/static/admin.js", "/static/acceptance.js", "/static/acceptance.css"):
+    for asset in ("/static/admin.js", "/static/admin-shell.css", "/static/acceptance.js", "/static/acceptance.css"):
         assert client.get(asset).status_code == 200, asset
+
+
+def test_observability_page_labels_logistics_retrieval_metrics():
+    page = client.get("/observability").text
+    assert "物流检索趋势" in page
+    assert "MRR@5" in page and "NDCG@5" in page
+    assert "忠实度和库外拒答不在这一轮评估内" in page
+
+
+def test_legacy_experiment_pages_redirect_to_agent_eval():
+    for path in ("/acceptance", "/acceptance/eval", "/acceptance/data", "/acceptance/errors"):
+        resp = client.get(path, follow_redirects=False)
+        assert resp.status_code == 307
+        assert resp.headers["location"] == "/agent-eval"
 
 
 def test_shipment_detail_page_is_reachable():

@@ -1,3 +1,5 @@
+import json
+
 from app.api import agent_eval
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
@@ -16,6 +18,23 @@ def test_agent_eval_overview_reads_dataset_without_live_report(monkeypatch, tmp_
     assert result["dataset"]["status"] == "attention"
     assert result["live"]["status"] == "missing"
     assert "--limit 5" in result["commands"]["sample"]
+
+
+def test_agent_eval_overview_marks_checkpoint_as_partial(monkeypatch, tmp_path):
+    report = tmp_path / "live.json"
+    report.write_text(json.dumps({"completed": 80, "target_total": 300,
+                                  "summary": {"total": 80, "passed": 40, "pass_rate": 0.5,
+                                              "by_category": {}}}), encoding="utf-8")
+    monkeypatch.setattr(agent_eval, "LIVE_REPORT", report)
+    result = agent_eval._live_overview()
+    assert result["status"] == "partial"
+    assert result["completed"] == 80
+    assert result["target_total"] == 300
+
+    report.write_text(json.dumps({"completed": 300, "target_total": 300,
+                                  "summary": {"total": 300, "passed": 200, "pass_rate": 0.6667,
+                                              "by_category": {}}}), encoding="utf-8")
+    assert agent_eval._live_overview()["status"] == "ok"
 
 
 async def test_agent_eval_api_exposes_read_only_overview():

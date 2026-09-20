@@ -27,15 +27,15 @@ async def query_order(
 
 @tool
 async def query_product(
-    product_name: Annotated[str, Field(description="商品名称或关键词,例如 猫粮")],
+    product_name: Annotated[str, Field(description="申报品名或关键词,例如 电子配件")],
 ) -> dict:
-    """查询商品的价格、库存和规格。用于用户咨询某商品是否有货、多少钱时。"""
+    """兼容性演示工具：查询申报品名对应的模拟价值和包装规格。物流主链路优先使用运单工具。"""
     rng = random.Random(f"product:{product_name}")
     return {
         "product_name": product_name,
         "price": rng.randint(20, 999),
         "stock": rng.randint(0, 500),
-        "spec": rng.choice(["标准装", "家庭装", "试用装"]),
+        "spec": rng.choice(["文件袋", "标准纸箱", "加固包装"]),
     }
 
 

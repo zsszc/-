@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>喵喵优选 · 知识库录入</title>
+  <title>航迹云 · 物流知识库</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'><rect x='2' y='2' width='4' height='4' fill='%232b2632'/><rect x='10' y='2' width='4' height='4' fill='%232b2632'/><rect x='2' y='4' width='12' height='9' fill='%232b2632'/><rect x='3' y='3' width='2' height='3' fill='%23ff9f57'/><rect x='11' y='3' width='2' height='3' fill='%23ff9f57'/><rect x='3' y='5' width='10' height='7' fill='%23ff9f57'/><rect x='5' y='7' width='1' height='2' fill='%232b2632'/><rect x='10' y='7' width='1' height='2' fill='%232b2632'/><rect x='7' y='9' width='2' height='1' fill='%23ff8095'/></svg>" />
   <link rel="stylesheet" href="/static/acceptance.css" />
   <style>
@@ -46,8 +46,8 @@
 <body>
   <div class="wrap">
     <div class="topbar">
-      <h1>知识库录入</h1>
-      <span class="sub">贴一段文档就能进库：切块 → 双写 MySQL 与 Milvus → 现场检索自测</span>
+      <h1>物流知识库</h1>
+      <span class="sub">导入政策与操作手册，完成切块、向量化和现场检索验证</span>
       <span class="spacer"></span>
       <button class="btn" id="refreshBtn">刷新</button>
     </div>
@@ -575,7 +575,7 @@
     $("stgBtn").addEventListener("click", loadStaging);
     $("searchBtn").addEventListener("click", doSearch);
     $("q").addEventListener("keydown", (e) => { if (e.key === "Enter") doSearch(); });
-    for (const q of ["邮费是多少", "运费怎么算", "多久发货", "猫粮过期了能退吗"]) {
+    for (const q of ["德国清关需要哪些资料", "跨境运费怎么计算", "包裹破损如何理赔", "哪些物品禁止寄运"]) {
       const b = el("button", "btn sm", q);
       b.addEventListener("click", () => { $("q").value = q; doSearch(); });
       $("presets").appendChild(b);

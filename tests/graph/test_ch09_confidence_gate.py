@@ -116,4 +116,4 @@ async def test_fallback_reply_defaults_source_when_missing(monkeypatch):
     out = await nodes.fallback_reply({"messages": [HumanMessage("嗯")], "conversation_id": 1, "trace": {}})
     assert recorded["source"] == "retrieval_low_conf"
     assert recorded["chunks"] is None             # 没快照就存 NULL,不存 []
-    assert out["trace"] == {"route": "fallback"}
+    assert out["trace"] == {"route": "fallback", "needs_tracking": False}

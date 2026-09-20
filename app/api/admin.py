@@ -1,21 +1,28 @@
-"""后台首页聚合 API:知识库、RAG 评估、飞轮待审、观测与成本、主题分布、分类器验收各给一张卡。
+"""航迹云运营总览 API：聚合运单、知识、评测、失败复盘和观测数据。
 
-各块依赖不同(mysql / Milvus / 嵌入与聊天上游 / :8110 分类器)。任何一块的依赖没起,
+各块依赖不同(MySQL / Milvus / 嵌入与聊天上游)。任何一块的依赖没起,
 只让它自己那张卡显示读数失败,不连坐整页——后台首页的用处正是在依赖不齐的时候
 也能一眼看出「哪一块现在是活的」。
 
 每张卡的数都从各模块自己的读数函数来,这里只做汇总,不另算一份。
 """
+import asyncio
+
 from fastapi import APIRouter
 
-from app.api import acceptance, agent_eval, kb, observability, rageval
+from app.api import agent_eval, kb, logistics_overview, rageval
+from app.core import observability as langfuse_observability
 from app.db import repository
 
 router = APIRouter(prefix="/api/admin")
 
 REVIEW_STATES = ("待审", "通过", "驳回")
-RAG_LABEL = {"vector": "纯向量", "bm25": "纯 BM25", "hybrid": "混合",
-             "hybrid_rerank": "混合 + 重排"}
+CONTENT_TYPE_LABELS = {
+    "faq": "常见问答",
+    "policy": "政策流程",
+    "manual": "操作手册",
+    "spec": "线路说明",
+}
 
 
 def _card(key: str, title: str, page: str, lede: str) -> dict:
@@ -51,44 +58,79 @@ async def _kb_card() -> dict:
     else:
         card["status"] = "ok"
         card["headline"] = f"{stats['total']} 块双写一致,可被语义检索"
-    card["note"] = "类型分布 " + " ".join(f"{k}={v}" for k, v in stats["by_content_type"].items())
+    card["note"] = "类型分布 " + " · ".join(
+        f"{CONTENT_TYPE_LABELS.get(key, key)} {value}"
+        for key, value in stats["by_content_type"].items()
+    )
+    return card
+
+
+async def _operations_card() -> dict:
+    """物流运营态势：演示运单、承运商、工具和回归样例的当前读数。"""
+    card = _card("operations", "物流运营态势", "/logistics-dashboard",
+                 "运单状态、承运商履约、异常分布与 Agent 工具能力")
+    try:
+        ov = await logistics_overview.overview()
+    except Exception as exc:
+        card["note"] = f"{type(exc).__name__}: {exc}"
+        return card
+    metrics, operations = ov["metrics"], ov["operations"]
+    carriers = operations.get("carrier_summary") or {}
+    exceptions = operations.get("exception_distribution") or {}
+    card["metrics"] = [
+        {"label": "演示运单", "value": operations.get("shipment_total", 0)},
+        {"label": "承运商", "value": len(carriers)},
+        {"label": "物流工具", "value": metrics.get("registered_tools", 0)},
+        {"label": "回归样例", "value": metrics.get("regression_cases", 0)},
+    ]
+    milvus = metrics.get("milvus") or {}
+    if not operations.get("shipment_total"):
+        card["status"], card["headline"] = "missing", "当前没有可展示的运单样例"
+    elif milvus.get("status") != "ready":
+        card["status"], card["headline"] = "attention", "运单工具可用，知识检索服务未就绪"
+    else:
+        card["status"] = "ok"
+        card["headline"] = (f"{operations['shipment_total']} 票运单在线，"
+                            f"{len(exceptions)} 类异常，知识库向量服务正常")
+    card["note"] = "当前为可复现的本地演示数据，不连接真实承运商生产系统"
     return card
 
 
 async def _rageval_card() -> dict:
-    """RAG 评估:四策略对照的那份报告。产物没跑过就是「没数据」,不是故障。"""
-    card = _card("rageval", "RAG 评估", "/rag-eval",
-                 "四策略对照:检索排得准不准 → 证据够不够 → 答案全不全")
+    """当前物流传统检索指标，并附最近 Agent 行为抽测。"""
+    card = _card("rageval", "RAG 检索评测", "/rag-eval",
+                 "固定 ground truth：Recall、Precision、MRR、NDCG 与端到端行为抽测")
     try:
         ov = await rageval.overview()
-    except Exception as e:
-        card["note"] = f"{type(e).__name__}: {e}"
+    except Exception as exc:
+        card["note"] = f"{type(exc).__name__}: {exc}"
         return card
-    if not ov["present"]:
-        card["status"], card["headline"] = "missing", "还没跑过评估,进去按一次「重跑 RAG 评估」"
-        card["note"] = "四策略 × 四桶,分钟级;需 Milvus + 已建库 + 聊天上游"
+    if not ov.get("present"):
+        card["status"], card["headline"] = "missing", "暂无当前物流传统检索报告"
+        card["note"] = ov.get("hint")
         return card
-    best, gen = ov["best"], ov["generation"]
+    active = ((ov.get("retrieval") or {}).get("hybrid_rerank") or {})
+    overall = active.get("overall") or {}
+    behavior = ov.get("behavior") or {}
+    meta = ov.get("meta") or {}
     card["metrics"] = [
-        {"label": "最佳 MRR", "value": f"{best['mrr']:.3f}" if best["mrr"] is not None else "—"},
-        {"label": "评估集", "value": f"{ov['meta'].get('n_samples', '—')} 题"},
-        {"label": "库外拒答",
-         "value": f"{round(gen['refusal']['rate'] * 100)}%" if gen else "—"},
+        {"label": "检索样本", "value": meta.get("samples", 0)},
+        {"label": "Recall@5", "value": f"{round((overall.get('recall_at_5') or 0) * 100)}%"},
+        {"label": "MRR@5", "value": f"{round((overall.get('mrr_at_5') or 0) * 100)}%"},
+        {"label": "NDCG@5", "value": f"{round((overall.get('ndcg_at_5') or 0) * 100)}%"},
     ]
-    if not ov["generation_done"]:
-        card["status"] = "attention"
-        card["headline"] = "生成段没跑完,只有检索段的数,补跑一次就齐"
-    else:
-        card["status"] = "ok"
-        card["headline"] = f"{RAG_LABEL.get(best['strategy'], best['strategy'])} 领先,总体 MRR {best['mrr']:.3f}"
-    card["note"] = f"上次跑于 {ov['meta'].get('generated_at') or '—'};页面只读产物,不重算"
+    card["status"] = "ok" if not active.get("errors") and (overall.get("recall_at_5") or 0) >= .9 else "attention"
+    card["headline"] = (f"生产策略 Recall@5 {round((overall.get('recall_at_5') or 0) * 100)}%，"
+                        f"行为抽测 {behavior.get('passed', 0)}/{behavior.get('total', 0)}")
+    best = ov.get("best") or {}
+    card["note"] = f"当前指标最优策略：{best.get('strategy') or '暂无'}；旧电商报告已隔离"
     return card
 
 
 async def _review_card() -> dict:
     """飞轮待审:答不上的问题标准化查重后攒在队列里,等人审。待审有货就是要干活。"""
-    card = _card("review", "飞轮待审队列", "/review",
-                 "答不上的问题 → 标准化查重 → 人工审核 → 写回知识库")
+    card = _card("review", "失败复盘", "/review",
+                 "低置信度问题 → 标准化查重 → 人工审核 → 补充物流知识")
     try:
         counts = {st: len(await repository.list_review_queue(st)) for st in REVIEW_STATES}
     except Exception as e:
@@ -106,53 +148,10 @@ async def _review_card() -> dict:
     return card
 
 
-async def _observability_card() -> dict:
-    """观测与成本:意图成本账、评估趋势、置信度阈值校准三块,哪块缺产物就说哪块。"""
-    card = _card("observability", "观测与成本", "/observability",
-                 "钱花在哪类问题上 · 指标有没有劣化 · 兜底阈值怎么定的")
-    try:
-        ov = await observability.overview()
-    except Exception as e:
-        card["note"] = f"{type(e).__name__}: {e}"
-        return card
-    cost, trend, calib = ov["cost"], ov["trend"], ov["calibration"]
-    latest = (trend["runs"][0]["metrics"] if trend.get("runs") else {}) or {}
-    top = cost.get("top")
-    card["metrics"] = [
-        # 卡上一格只放一个数,四格才排得齐一行;哪条意图最烧钱写在结论句里
-        {"label": "最烧钱占比", "value": f"{round(top['share'] * 100)}%" if top else "—"},
-        {"label": "评估轮次", "value": len(trend.get("runs") or [])},
-        {"label": "忠实度",
-         "value": f"{latest['faithfulness']:.3f}" if latest.get("faithfulness") is not None else "—"},
-        {"label": "在用阈值", "value": f"{calib['in_use']:.2f}"},
-    ]
-    missing = [name for name, blk in (("意图成本账", cost), ("评估趋势", trend),
-                                      ("阈值校准", calib)) if blk["status"] != "ok"]
-    if trend["status"] == "error":
-        card["note"] = trend.get("note")
-        return card
-    if len(missing) == 3:
-        card["status"], card["headline"] = "missing", "三块都还没跑过,进去按一次就有数"
-    elif missing:
-        card["status"], card["headline"] = "attention", "缺 " + "、".join(missing)
-    elif calib["in_sync"] == "aggressive":
-        card["status"] = "attention"
-        card["headline"] = (f"在用阈值 {calib['in_use']} 低于推荐 "
-                            f"{calib['recommended'].get('threshold')},应拒可能漏进来")
-    else:
-        card["status"] = "ok"
-        faith = latest.get("faithfulness")
-        card["headline"] = ((f"{top['intent']}最烧钱," if top else "")
-                            + "最近一轮忠实度 "
-                            + (f"{faith:.3f}" if faith is not None else "—"))
-    card["note"] = card["note"] or "报表都是 make 落的产物,页面只读不重算"
-    return card
-
-
 async def _topics_card() -> dict:
-    """主题分布:分类器旁路归类的结果,看哪类堆得多。"""
-    card = _card("topics", "主题分布", "/topics",
-                 "低置信度问题 → 分类器旁路归类 → 哪类堆得多,先补哪块知识")
+    """问题主题：旁路识别低置信度问题，用于决定下一批知识补充方向。"""
+    card = _card("topics", "问题主题", "/topics",
+                 "低置信度问题 → 主题识别 → 按缺口优先级补充物流知识")
     try:
         dist = await repository.topic_distribution()
     except Exception as e:
@@ -165,36 +164,10 @@ async def _topics_card() -> dict:
     card["metrics"] = [{"label": "已归类问题", "value": dist["total"]},
                        {"label": "命中类目", "value": f"{hit}/{len(dist['classes'])}"}]
     if not dist["total"]:
-        card["status"], card["headline"] = "missing", "还没归类过,去分类器验收页跑一次旁路批量归类"
+        card["status"], card["headline"] = "missing", "暂无主题样本，先积累几条低置信度问题"
     else:
         card["status"] = "ok"
         card["headline"] = "占前三:" + "、".join(f"{c['label']} {c['count']}" for c in top)
-    return card
-
-
-async def _classifier_card() -> dict:
-    """分类器验收:九项实证的闸门数直接取验收总览那一份,不在这里重算。"""
-    card = _card("classifier", "分类器验收", "/acceptance",
-                 "语料 → 微调 → 评测 → 导出 → 旁路归类,九项实证逐项过闸")
-    try:
-        ov = await acceptance.overview()
-    except Exception as e:
-        card["note"] = f"{type(e).__name__}: {e}"
-        return card
-    online = ov["classifier"]["online"]
-    card["metrics"] = [{"label": "过闸", "value": f"{ov['passed']}/{ov['total']}"},
-                       {"label": ":8110", "value": "在线" if online else "离线"}]
-    if ov["all_pass"]:
-        card["status"], card["headline"] = "ok", "九项全过闸"
-    else:
-        missing = [b["title"] for b in ov["blocks"] if b["status"] == "missing"]
-        failed = [b["title"] for b in ov["blocks"] if b["status"] == "fail"]
-        card["status"] = "attention" if failed else "missing"
-        card["headline"] = "、".join(
-            ([f"{len(failed)} 项不达标:" + "/".join(failed)] if failed else [])
-            + ([f"{len(missing)} 项缺产物:" + "/".join(missing)] if missing else [])
-        ) or "还没跑过"
-    card["note"] = "页面上的数与终端 make 跑出来的是同一份产物"
     return card
 
 
@@ -226,8 +199,32 @@ async def _agent_eval_card() -> dict:
     return card
 
 
+async def _observability_card() -> dict:
+    """Langfuse 是可选观测依赖：离线只标记降级，不代表 Agent 不可用。"""
+    card = _card("observability", "链路观测", "/observability",
+                 "LangGraph Trace、工具路由、延迟、Token、错误与用户反馈")
+    runtime = await asyncio.to_thread(langfuse_observability.runtime_snapshot)
+    metrics = runtime["metrics"]
+    card["metrics"] = [
+        {"label": "24h 近期样本", "value": metrics["requests"]},
+        {"label": "错误", "value": metrics["errors"]},
+        {"label": "平均延迟", "value": f"{metrics['avg_latency']:.2f}s"},
+        {"label": "Token", "value": metrics["total_tokens"]},
+    ]
+    if runtime["status"] == "online":
+        card["status"] = "attention" if metrics["errors"] else "ok"
+        card["headline"] = (f"Langfuse 在线，P95 {metrics['p95_latency']:.2f}s，"
+                            f"近期 {len(runtime['traces'])} 条链路可追溯")
+    elif runtime["status"] == "unconfigured":
+        card["status"], card["headline"] = "missing", "Langfuse 尚未配置，Agent 主链路不受影响"
+    else:
+        card["status"], card["headline"] = "attention", "Langfuse 已配置但当前不可达"
+    card["note"] = runtime.get("note") or "点击进入查看最近 Trace 与意图成本分布"
+    return card
+
+
 @router.get("/overview")
 async def overview() -> dict:
-    return {"modules": [await _kb_card(), await _rageval_card(), await _review_card(),
-                        await _observability_card(), await _topics_card(),
-                        await _classifier_card(), await _agent_eval_card()]}
+    return {"modules": [await _operations_card(), await _kb_card(), await _agent_eval_card(),
+                        await _rageval_card(), await _observability_card(),
+                        await _review_card(), await _topics_card()]}

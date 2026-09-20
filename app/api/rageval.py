@@ -1,11 +1,8 @@
-"""RAG 评估页的只读 API:把 make eval-rag 落下的那份报告端出去,不重算。
+"""RAG 评估页的只读 API：读取当前物流传统检索与 Agent 行为报告。
 
-页面上的每个数都来自 data/ch04/reports/rag_eval.json——那是评估脚本跑完写下的产物。
-API 不复算 MRR、不复判覆盖度:一旦这里也算一遍,页面和终端就会有两个真相,谁对都说不清。
-
-产物没跑过不是错误:回 present=false + 该按哪个作业,页面据此长出「去跑一次」而不是白屏。
-生成段(LLM 裁判那一段)可能因上游不稳而缺,报告里 generation 为 null,页面照样呈现
-确定性的检索段——半份结果比一片空白有用。
+传统指标来自 data/evals/logistics_retrieval_eval_report.json，行为通过率来自最近一次
+30 条在线 Agent 抽测。API 不复算指标，避免脚本和页面出现两套真相；产物缺失时返回
+present=false 和可执行命令，而不是让页面白屏。历史 ch04 报告仅供旧编造个案台账兼容。
 """
 import json
 import pathlib
@@ -18,9 +15,13 @@ from app.schemas.rageval import FaithCaseStatusRequest
 
 router = APIRouter(prefix="/api/rag-eval")
 
-REPORT = pathlib.Path(__file__).resolve().parents[2] / "data/ch04/reports/rag_eval.json"
+ROOT = pathlib.Path(__file__).resolve().parents[2]
+# REPORT 保留给历史编造个案台账计算；物流检索指标使用独立产物，避免旧电商报告串入页面。
+REPORT = ROOT / "data/ch04/reports/rag_eval.json"
+RETRIEVAL_REPORT = ROOT / "data/evals/logistics_retrieval_eval_report.json"
+BEHAVIOR_REPORT = ROOT / "data/evals/logistics_agent_eval_report_live.json"
 TEXT_LOG = REPORT.with_name("rag_eval.txt")
-JOB = "eval-rag"          # 重跑按钮按的就是终端那条 make eval-rag
+JOB = "eval-logistics-retrieval"
 STRATEGIES = ("vector", "bm25", "hybrid", "hybrid_rerank")
 BUCKETS = ("A_policy", "B_model", "C_colloquial", "E_multi")   # 可作答桶;库外 D_absent 只评拒答
 
@@ -28,6 +29,13 @@ BUCKETS = ("A_policy", "B_model", "C_colloquial", "E_multi")   # 可作答桶;�
 def _read() -> dict | None:
     try:
         return json.loads(REPORT.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def _read_json(path: pathlib.Path) -> dict | None:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return None
 
@@ -43,41 +51,41 @@ def _stat(path: pathlib.Path) -> dict:
 
 
 def _best_strategy(report: dict) -> dict:
-    """总体 MRR 最高的那一路。四策略对照的结论句、KPI 都指着它,算一次就够。"""
-    best, best_mrr = None, -1.0
-    for s in STRATEGIES:
-        mrr = ((report.get("retrieval") or {}).get(s) or {}).get("overall", {}).get("mrr")
-        if mrr is not None and mrr > best_mrr:
-            best, best_mrr = s, mrr
-    return {"strategy": best, "mrr": best_mrr if best else None}
+    """先按 NDCG@5、再按 MRR@5 选总体排序最好的策略。"""
+    candidates = []
+    for name, payload in (report.get("strategies") or {}).items():
+        overall = payload.get("overall") or {}
+        candidates.append((overall.get("ndcg_at_5", -1), overall.get("mrr_at_5", -1), name))
+    if not candidates:
+        return {"strategy": None, "ndcg_at_5": None, "mrr_at_5": None}
+    ndcg, mrr, name = max(candidates)
+    return {"strategy": name, "ndcg_at_5": ndcg, "mrr_at_5": mrr}
 
 
 @router.get("/overview")
 async def overview() -> dict:
-    report = _read()
+    report = _read_json(RETRIEVAL_REPORT)
+    behavior = _read_json(BEHAVIOR_REPORT)
     job = {"specs": [jobs.status(JOB)], "artifacts": {
-        "json": _stat(REPORT) | {"path": "data/ch04/reports/rag_eval.json"},
-        "text": _stat(TEXT_LOG) | {"path": "data/ch04/reports/rag_eval.txt"},
+        "json": _stat(RETRIEVAL_REPORT) | {"path": "data/evals/logistics_retrieval_eval_report.json"},
     }}
     if report is None:
         return {"present": False, "job": job,
-                "make": "make eval-rag",
-                "hint": "还没跑过 RAG 评估。按「重跑 RAG 评估」现场跑一轮"
-                        "(四策略 × 四桶,需 Milvus + 已建库 + 聊天上游,分钟级)。"}
-    gen = report.get("generation")
+                "make": "make eval-logistics-retrieval",
+                "hint": "还没有当前物流知识库的传统检索报告，请运行四策略检索评测。"}
     return {
         "present": True,
         "meta": report.get("meta") or {},
-        "retrieval": report.get("retrieval") or {},
-        "evidence_coverage": report.get("evidence_coverage") or {},
-        "generation": gen,
-        "generation_done": gen is not None,
-        # 读图小注:评估脚本落盘时让模型看着这一轮的数写的,并已校过里面每个数字。
-        # 缺哪张就没哪个 key,页面回落自己那句兜底话——注不是数,页面不能因为没注就白屏
-        "read_notes": report.get("read_notes") or {},
+        "retrieval": report.get("strategies") or {},
         "best": _best_strategy(report),
-        "strategies": list(STRATEGIES),
-        "buckets": list(BUCKETS),
+        "behavior": (behavior or {}).get("summary"),
+        "definitions": {
+            "hit_rate": "前 K 条至少命中一个相关知识小节的比例",
+            "precision": "前 K 条首次命中的相关小节数 / K",
+            "recall": "前 K 条命中的相关小节数 / 全部标注相关小节数",
+            "mrr": "第一个相关小节名次倒数的平均值",
+            "ndcg": "考虑相关小节排序位置的归一化累计增益",
+        },
         "job": job,
     }
 

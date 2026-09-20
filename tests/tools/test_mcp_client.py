@@ -58,3 +58,9 @@ def test_logistics_formatter_translates_codes():
          "trace": ["深圳分拨中心 已发出"], "carrier_code": "SF-EXP-01"})
     assert out == {"tracking_no": "SF1", "status": "运输中", "current_city": "深圳",
                    "trace": ["深圳分拨中心 已发出"]}            # 挑字段 + 枚举翻人话,内部编码剔除
+
+
+def test_only_loopback_mcp_disables_proxy():
+    local = mcp_client._connection("http://127.0.0.1:8101/mcp")
+    assert local["httpx_client_factory"] is mcp_client._loopback_http_client
+    assert "httpx_client_factory" not in mcp_client._connection("https://mcp.example.com/mcp")

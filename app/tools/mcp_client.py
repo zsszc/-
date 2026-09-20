@@ -3,6 +3,9 @@ adapters 每次调用新建 session——Server 侧加工具,客服系统不重�
 权限/格式化只认我们侧:Server 自报的用途描述仅供模型参考,能不能调按 registry.WRITE_TOOLS。"""
 import asyncio
 import logging
+from urllib.parse import urlsplit
+
+import httpx
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
@@ -11,6 +14,18 @@ from app.tools import registry
 from app.tools.registry import ToolSpec
 
 logger = logging.getLogger(__name__)
+
+
+def _loopback_http_client(headers=None, timeout=None, auth=None) -> httpx.AsyncClient:
+    """仅回环 MCP 直连；代理环境会把 127.0.0.1 请求转成 502。"""
+    return httpx.AsyncClient(headers=headers, timeout=timeout, auth=auth, trust_env=False)
+
+
+def _connection(url: str) -> dict:
+    conn = {"transport": "streamable_http", "url": url}
+    if urlsplit(url).hostname in {"localhost", "127.0.0.1", "::1"}:
+        conn["httpx_client_factory"] = _loopback_http_client
+    return conn
 
 
 def _translate(mapping: dict[str, str], code):
@@ -46,8 +61,8 @@ _client: MultiServerMCPClient | None = None
 
 def _connections() -> dict:
     return {
-        "logistics": {"transport": "streamable_http", "url": settings.mcp_logistics_url},
-        "aftersales": {"transport": "streamable_http", "url": settings.mcp_aftersales_url},
+        "logistics": _connection(settings.mcp_logistics_url),
+        "aftersales": _connection(settings.mcp_aftersales_url),
     }
 
 

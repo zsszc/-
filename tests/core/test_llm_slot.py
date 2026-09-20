@@ -37,9 +37,10 @@ def test_needs_non_streaming_tools_reads_slot(monkeypatch):
     monkeypatch.setattr(settings, "intent_model", "MiniMax-M3")
     assert needs_non_streaming_tools(slot="intent")
     monkeypatch.setattr(settings, "intent_model", "deepseek-v4-flash")
-    assert not needs_non_streaming_tools(slot="intent")
+    assert needs_non_streaming_tools(slot="intent")
 
 
 def test_needs_non_streaming_tools_explicit_model_wins():
     assert needs_non_streaming_tools("MiniMax-M2.7")
+    assert needs_non_streaming_tools("deepseek-ai/DeepSeek-V4-Flash")
     assert not needs_non_streaming_tools("gpt-4o")

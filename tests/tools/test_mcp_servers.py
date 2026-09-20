@@ -13,6 +13,13 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 _ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 
 
+@pytest.fixture(autouse=True)
+def _local_mcp_bypasses_host_proxy(monkeypatch):
+    """测试只访问本机 MCP；宿主 HTTP 代理不应拦截回环请求。"""
+    monkeypatch.setenv("NO_PROXY", "127.0.0.1,localhost,::1")
+    monkeypatch.setenv("no_proxy", "127.0.0.1,localhost,::1")
+
+
 def _wait_port(port: int, timeout: float = 10.0) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:

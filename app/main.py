@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.acceptance import router as acceptance_router
@@ -60,7 +60,7 @@ async def lifespan(app: FastAPI):
     try:
         from app.core import retrieval
         for _ in range(15):
-            hits = await retrieval.search_knowledge("退货运费", strategy="bm25", top_k=1)
+            hits = await retrieval.search_knowledge("德国个人件清关需要什么资料", strategy="bm25", top_k=1)
             if hits:
                 logger.info("Milvus 预热完成,集合可检索")
                 break
@@ -169,7 +169,7 @@ async def kb_page() -> FileResponse:
 
 @app.get("/rag-eval", include_in_schema=False)
 async def rageval_page() -> FileResponse:
-    """ch04 RAG 评估页:四策略对照的那份报告,页面上看,也在页面上重跑。"""
+    """当前物流知识库的传统检索指标与端到端行为评测。"""
     return FileResponse(_STATIC_DIR / "rageval.html")
 
 
@@ -181,7 +181,7 @@ async def review_page() -> FileResponse:
 
 @app.get("/observability", include_in_schema=False)
 async def observability_page() -> FileResponse:
-    """ch09 观测与成本页:意图成本账、评估趋势、置信度阈值校准三张报表,页上看也页上重跑。"""
+    """当前物流 Agent 的 Langfuse 链路、成本、质量趋势与置信度观测。"""
     return FileResponse(_STATIC_DIR / "observability.html")
 
 
@@ -198,24 +198,21 @@ async def topic_questions_page() -> FileResponse:
 
 
 @app.get("/acceptance", include_in_schema=False)
-async def acceptance_page() -> FileResponse:
-    """ch10 验收总览:九项实证各一张闸门卡,产物缺失就地重跑。"""
-    return FileResponse(_STATIC_DIR / "acceptance.html")
+async def acceptance_page() -> RedirectResponse:
+    """旧电商分类器页面退出产品导航，统一进入当前物流 Agent 评测。"""
+    return RedirectResponse("/agent-eval", status_code=307)
 
 
 @app.get("/acceptance/eval", include_in_schema=False)
-async def acceptance_eval_page() -> FileResponse:
-    """ch10 评测详情:每类 P/R/F1 与容错红线、micro vs macro、阈值扫描、混淆矩阵、单句试分类。"""
-    return FileResponse(_STATIC_DIR / "acceptance-eval.html")
+async def acceptance_eval_page() -> RedirectResponse:
+    return RedirectResponse("/agent-eval", status_code=307)
 
 
 @app.get("/acceptance/data", include_in_schema=False)
-async def acceptance_data_page() -> FileResponse:
-    """ch10 数据产物:语料血缘、三份考卷与泄漏自检、训练与 ONNX 产物盘点。"""
-    return FileResponse(_STATIC_DIR / "acceptance-data.html")
+async def acceptance_data_page() -> RedirectResponse:
+    return RedirectResponse("/agent-eval", status_code=307)
 
 
 @app.get("/acceptance/errors", include_in_schema=False)
-async def acceptance_errors_page() -> FileResponse:
-    """ch10 错例复核:逐条标准/预测对照、错误方向记账、边界摩擦配对。"""
-    return FileResponse(_STATIC_DIR / "acceptance-errors.html")
+async def acceptance_errors_page() -> RedirectResponse:
+    return RedirectResponse("/agent-eval", status_code=307)

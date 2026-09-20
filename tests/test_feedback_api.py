@@ -7,7 +7,8 @@ from app.api import feedback as feedback_api
 
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
+    monkeypatch.setattr(feedback_api, "score_session_feedback", lambda *args: False)
     app = FastAPI()
     app.include_router(feedback_api.router)
     return TestClient(app)
@@ -59,10 +60,17 @@ def test_down_survives_snapshot_failure(client, spy_insert, monkeypatch):
 def test_up_logs_only(client, spy_insert, monkeypatch):
     _stub_snapshot(monkeypatch, "q", [])
     r = client.post("/api/feedback", json={"conversation_id": 1, "rating": "up", "question": "q"})
-    assert r.status_code == 200 and r.json()["pooled"] is False
+    assert r.status_code == 200 and r.json()["pooled"] is False and r.json()["scored"] is False
     assert spy_insert == []                       # 👍 不落库
 
 
 def test_rejects_bad_rating(client, spy_insert):
     r = client.post("/api/feedback", json={"conversation_id": 1, "rating": "meh", "question": "q"})
     assert r.status_code == 422
+
+
+def test_feedback_reports_langfuse_score(client, spy_insert, monkeypatch):
+    monkeypatch.setattr(feedback_api, "score_session_feedback", lambda *args: True)
+    _stub_snapshot(monkeypatch, "q", [])
+    r = client.post("/api/feedback", json={"conversation_id": 1, "rating": "up", "question": "q"})
+    assert r.status_code == 200 and r.json()["scored"] is True

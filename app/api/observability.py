@@ -18,12 +18,16 @@
 """
 import json
 import pathlib
+import asyncio
 
 from fastapi import APIRouter
 
 from app.config import settings
 from app.core import jobs
+from app.core import observability as langfuse_observability
 from app.core.confidence import W_KEY, W_MARGIN, W_TOP1, W_VALID
+from app.core.eval_meta import LOGISTICS_RETRIEVAL_DATASET
+from app.core.intent import INTENTS
 from app.db import repository
 
 router = APIRouter(prefix="/api/observability")
@@ -33,9 +37,8 @@ COST = REPORT_DIR / "cost_by_intent.json"
 CALIB = REPORT_DIR / "confidence_calibration.json"
 TREND_NOTE = REPORT_DIR / "eval_trend_note.json"
 COST_JOB, TREND_JOB, CALIB_JOB = "cost-report", "eval-flywheel", "calibrate-confidence"
-TREND_LIMIT = 10                  # 趋势看最近十轮:再多一屏也读不出走向
-# recall_at_10 是改口径之前的老键,历史那几轮还在库里,一起列出来页面才画得全
-METRIC_NAMES = ("recall_at_5", "recall_at_10", "mrr", "faithfulness", "refusal_rate")
+TREND_LIMIT = 10
+METRIC_NAMES = ("recall_at_5", "mrr_at_5", "ndcg_at_5")
 
 
 def _read(path: pathlib.Path) -> dict | None:
@@ -58,6 +61,19 @@ def _cost_block() -> dict:
     if report is None:
         return block
     rows = report.get("rows") or []
+    legacy = sorted({str(row.get("intent")) for row in rows
+                     if row.get("intent") not in INTENTS})
+    if legacy:
+        return block | {
+            "status": "missing",
+            "legacy": True,
+            "rows": [],
+            "total_tokens": 0,
+            "total_requests": 0,
+            "top": None,
+            "hint": ("已隔离旧业务成本产物（含 " + "、".join(legacy)
+                     + "）。启动 Langfuse 后先进行几轮物流对话，再重跑意图成本账。"),
+        }
     return block | {
         "present": True, "status": "ok" if rows else "missing",
         "meta": report.get("meta") or {},
@@ -79,13 +95,15 @@ def _trend_note(latest_run_id: int) -> str | None:
 
 async def _trend_block() -> dict:
     block = _block(TREND_JOB, "make eval-flywheel",
-                   "还没跑过评估流水线。按一次「重跑 评估流水线」,这一轮就是趋势的第一个点。")
+                   "还没跑过物流检索趋势。按一次「重跑 物流检索评估」生成第一个点。")
     try:
-        runs = await repository.list_eval_runs(limit=TREND_LIMIT)
+        recent = await repository.list_eval_runs(limit=100)
+        runs = [r for r in recent if (r.metrics or {}).get("dataset") == LOGISTICS_RETRIEVAL_DATASET][:TREND_LIMIT]
     except Exception as e:
         return block | {"status": "error", "note": f"{type(e).__name__}: {e}"}
     return block | {
         "present": bool(runs), "status": "ok" if runs else "missing",
+        "dataset": LOGISTICS_RETRIEVAL_DATASET,
         "metric_names": list(METRIC_NAMES),
         "read_note": _trend_note(runs[0].id) if runs else None,
         # 新在上:第 0 行是最近一轮,页面据此和下一行比涨跌
@@ -125,11 +143,13 @@ def _calibration_block() -> dict:
         "recommended": rec,
         "in_use_stats": in_use_stats,
         "read_note": (report.get("read_notes") or {}).get("confidence_calibration"),
-        "in_sync": sync,
+        "in_sync": sync == "match",
+        "sync_mode": sync,
     }
 
 
 @router.get("/overview")
 async def overview() -> dict:
-    return {"cost": _cost_block(), "trend": await _trend_block(),
+    runtime = await asyncio.to_thread(langfuse_observability.runtime_snapshot)
+    return {"runtime": runtime, "cost": _cost_block(), "trend": await _trend_block(),
             "calibration": _calibration_block()}

@@ -12,3 +12,4 @@ class FeedbackRequest(BaseModel):
 class FeedbackResponse(BaseModel):
     ok: bool = True
     pooled: bool           # down 且成功落池才为 True
+    scored: bool = False   # Langfuse 可用时关联最近 Trace；失败不影响反馈主流程

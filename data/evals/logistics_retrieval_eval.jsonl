@@ -1,0 +1,30 @@
+{"id":"retr-001","query":"包裹在什么情况下可以申请丢失或破损理赔？","expected_sections":["包裹丢损与理赔规则 / 什么时候可以申请理赔？"],"kind":"single"}
+{"id":"retr-002","query":"申请国际包裹理赔需要提交哪些证明材料？","expected_sections":["包裹丢损与理赔规则 / 理赔材料"],"kind":"single"}
+{"id":"retr-003","query":"发现包裹丢损后最迟多久要提交理赔？","expected_sections":["包裹丢损与理赔规则 / 理赔时限"],"kind":"single"}
+{"id":"retr-004","query":"德国个人件清关通常需要准备什么资料？","expected_sections":["跨境清关说明 / 清关所需资料"],"kind":"single"}
+{"id":"retr-005","query":"国际包裹产生的关税和进口税由谁承担？","expected_sections":["跨境清关说明 / 关税和进口税由谁承担？"],"kind":"single"}
+{"id":"retr-006","query":"包裹清关延误时应该如何处理？","expected_sections":["跨境清关说明 / 清关延误处理"],"kind":"single"}
+{"id":"retr-007","query":"跨境物流通常有哪些异常状态？","expected_sections":["跨境物流异常处理手册 / 常见异常状态"],"kind":"single"}
+{"id":"retr-008","query":"发现物流异常后应该按照什么顺序处理？","expected_sections":["跨境物流异常处理手册 / 处理顺序"],"kind":"single"}
+{"id":"retr-009","query":"物流异常时与客户沟通要遵循什么原则？","expected_sections":["跨境物流异常处理手册 / 异常沟通原则"],"kind":"single"}
+{"id":"retr-010","query":"哪些危险品禁止通过国际快递寄送？","expected_sections":["跨境运输禁限寄规则 / 禁寄物品"],"kind":"single"}
+{"id":"retr-011","query":"哪些物品寄送前必须先和承运商确认？","expected_sections":["跨境运输禁限寄规则 / 需要提前确认的物品"],"kind":"single"}
+{"id":"retr-012","query":"国际快递填写品名和申报价值有什么要求？","expected_sections":["跨境运输禁限寄规则 / 申报要求"],"kind":"single"}
+{"id":"retr-013","query":"如何查询国际运单当前运输进度？","expected_sections":["跨境物流常见问题 / 如何查询国际运单进度？"],"kind":"single"}
+{"id":"retr-014","query":"运单状态显示清关中代表什么意思？","expected_sections":["跨境物流常见问题 / 运单显示清关中是什么意思？"],"kind":"single"}
+{"id":"retr-015","query":"物流轨迹多久没有更新才需要联系客服？","expected_sections":["跨境物流常见问题 / 物流多久没有更新可以咨询？"],"kind":"single"}
+{"id":"retr-016","query":"国际包裹发出后还能修改收件地址吗？","expected_sections":["跨境物流常见问题 / 可以修改收件地址吗？"],"kind":"single"}
+{"id":"retr-017","query":"国际运费按实际重量还是体积重量计算？","expected_sections":["国际运输费用参考 / 计费重量"],"kind":"single"}
+{"id":"retr-018","query":"国际运输费用通常由哪些项目构成？","expected_sections":["国际运输费用参考 / 费用构成"],"kind":"single"}
+{"id":"retr-019","query":"国际快递标准线路和特快线路时效大约多久？","expected_sections":["国际运输费用参考 / 时效参考"],"kind":"single"}
+{"id":"retr-020","query":"包裹破损后能否理赔，需要什么材料，多久内提交？","expected_sections":["包裹丢损与理赔规则 / 什么时候可以申请理赔？","包裹丢损与理赔规则 / 理赔材料","包裹丢损与理赔规则 / 理赔时限"],"kind":"multi"}
+{"id":"retr-021","query":"德国清关要准备哪些资料，税费由谁承担？","expected_sections":["跨境清关说明 / 清关所需资料","跨境清关说明 / 关税和进口税由谁承担？"],"kind":"multi"}
+{"id":"retr-022","query":"包裹显示清关中且长时间没有进展，状态含义和处理办法是什么？","expected_sections":["跨境物流常见问题 / 运单显示清关中是什么意思？","跨境清关说明 / 清关延误处理"],"kind":"multi"}
+{"id":"retr-023","query":"锂电池寄到美国前要确认什么，申报时需要注意什么？","expected_sections":["跨境运输禁限寄规则 / 需要提前确认的物品","跨境运输禁限寄规则 / 申报要求"],"kind":"multi"}
+{"id":"retr-024","query":"粉末和液体能否国际寄运，哪些属于明确禁寄品？","expected_sections":["跨境运输禁限寄规则 / 禁寄物品","跨境运输禁限寄规则 / 需要提前确认的物品"],"kind":"multi"}
+{"id":"retr-025","query":"物流三天没更新时，先判断什么异常，再按什么顺序处理？","expected_sections":["跨境物流常见问题 / 物流多久没有更新可以咨询？","跨境物流异常处理手册 / 常见异常状态","跨境物流异常处理手册 / 处理顺序"],"kind":"multi"}
+{"id":"retr-026","query":"收件地址填错了能不能修改，异常处理时如何与客户沟通？","expected_sections":["跨境物流常见问题 / 可以修改收件地址吗？","跨境物流异常处理手册 / 异常沟通原则"],"kind":"multi"}
+{"id":"retr-027","query":"2kg包裹如何确定计费重量，最终费用还包含哪些附加项目？","expected_sections":["国际运输费用参考 / 计费重量","国际运输费用参考 / 费用构成"],"kind":"multi"}
+{"id":"retr-028","query":"选择国际运输线路时，费用构成和参考时效分别怎么看？","expected_sections":["国际运输费用参考 / 费用构成","国际运输费用参考 / 时效参考"],"kind":"multi"}
+{"id":"retr-029","query":"货物清关时资料不全又可能涉及禁限寄，应该核对哪些内容？","expected_sections":["跨境清关说明 / 清关所需资料","跨境运输禁限寄规则 / 需要提前确认的物品","跨境运输禁限寄规则 / 申报要求"],"kind":"multi"}
+{"id":"retr-030","query":"包裹丢失后应该先怎样处理，并准备哪些理赔资料？","expected_sections":["跨境物流异常处理手册 / 处理顺序","包裹丢损与理赔规则 / 理赔材料"],"kind":"multi"}

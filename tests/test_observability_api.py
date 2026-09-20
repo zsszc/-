@@ -10,8 +10,8 @@ from app.db import repository
 
 COST = {
     "meta": {"days": 7, "source": "Langfuse", "generated_at": "2026-07-29 10:00"},
-    "rows": [{"intent": "商品咨询", "count": 3, "tokens": 8821, "avg_tokens": 2940, "share": 0.4712},
-             {"intent": "物流", "count": 1, "tokens": 7942, "avg_tokens": 7942, "share": 0.4243}],
+    "rows": [{"intent": "清关咨询", "count": 3, "tokens": 8821, "avg_tokens": 2940, "share": 0.4712},
+             {"intent": "运单查询", "count": 1, "tokens": 7942, "avg_tokens": 7942, "share": 0.4243}],
     "total_tokens": 16763, "total_requests": 4,
 }
 CALIB = {
@@ -59,6 +59,7 @@ async def test_nothing_run_yet_is_a_state_not_an_error(client, reports):
     assert body["cost"]["job"]["name"] == "cost-report"
     assert body["trend"]["make"] == "make eval-flywheel"
     assert body["calibration"]["job"]["name"] == "calibrate-confidence"
+    assert body["runtime"]["status"] == "unconfigured"
 
 
 async def test_cost_is_passed_through_verbatim(client, reports):
@@ -68,7 +69,7 @@ async def test_cost_is_passed_through_verbatim(client, reports):
     cost = (await client.get("/api/observability/overview")).json()["cost"]
     assert cost["present"] is True and cost["status"] == "ok"
     assert cost["rows"] == COST["rows"]
-    assert cost["top"]["intent"] == "商品咨询"
+    assert cost["top"]["intent"] == "清关咨询"
     assert cost["total_tokens"] == 16763
 
 
@@ -83,16 +84,22 @@ async def test_cost_with_no_trace_in_window_reads_as_missing(client, reports):
 
 
 async def test_trend_reads_eval_runs_newest_first(client, reports):
-    """趋势的权威源是 eval_runs 表:新在上,页面按这个顺序和上一轮比涨跌。"""
+    """只展示物流检索轮次；旧电商数据保留在库中但不混入页面。"""
     await repository.insert_eval_run("手动", 80, {"recall_at_10": 1.0, "mrr": 0.972,
                                                   "faithfulness": 1.0, "refusal_rate": 1.0})
-    await repository.insert_eval_run("定时", 80, {"recall_at_10": 1.0, "mrr": 0.964,
-                                                  "faithfulness": 0.95, "refusal_rate": 1.0})
+    await repository.insert_eval_run("手动", 30, {"dataset": "logistics_retrieval_v1",
+                                                  "recall_at_5": 0.96, "mrr_at_5": 0.94,
+                                                  "ndcg_at_5": 0.93})
+    await repository.insert_eval_run("定时", 30, {"dataset": "logistics_retrieval_v1",
+                                                  "recall_at_5": 0.97, "mrr_at_5": 0.95,
+                                                  "ndcg_at_5": 0.94})
 
     trend = (await client.get("/api/observability/overview")).json()["trend"]
     assert trend["present"] is True
     assert [r["triggered_by"] for r in trend["runs"]] == ["定时", "手动"]
-    assert trend["runs"][0]["metrics"]["faithfulness"] == 0.95
+    assert len(trend["runs"]) == 2
+    assert trend["runs"][0]["metrics"]["mrr_at_5"] == 0.95
+    assert trend["dataset"] == "logistics_retrieval_v1"
 
 
 async def test_calibration_flags_threshold_out_of_sync(client, reports, monkeypatch):
@@ -120,14 +127,14 @@ async def test_broken_report_does_not_take_down_the_page(client, reports):
 async def test_read_notes_come_from_the_artifacts(client, reports):
     """读图小注也是产物的一部分:脚本落盘时就校过数,API 原样端出去,不在这儿重写。"""
     reports[0].write_text(json.dumps(
-        {**COST, "read_notes": {"cost_by_intent": "商品咨询占 47%,先给它瘦 prompt"}},
+        {**COST, "read_notes": {"cost_by_intent": "清关咨询占 47%,先给它瘦 prompt"}},
         ensure_ascii=False), encoding="utf-8")
     reports[1].write_text(json.dumps(
         {**CALIB, "read_notes": {"confidence_calibration": "线定在 0.26,库外一条都进不来"}},
         ensure_ascii=False), encoding="utf-8")
 
     body = (await client.get("/api/observability/overview")).json()
-    assert body["cost"]["read_note"] == "商品咨询占 47%,先给它瘦 prompt"
+    assert body["cost"]["read_note"] == "清关咨询占 47%,先给它瘦 prompt"
     assert body["calibration"]["read_note"] == "线定在 0.26,库外一条都进不来"
 
 
@@ -139,10 +146,20 @@ async def test_missing_read_note_is_null_not_an_error(client, reports):
     assert cost["status"] == "ok" and cost["read_note"] is None
 
 
+async def test_legacy_ecommerce_cost_report_is_hidden(client, reports):
+    old = {**COST, "rows": [{"intent": "商品咨询", "count": 1, "tokens": 99,
+                              "avg_tokens": 99, "share": 1.0}]}
+    reports[0].write_text(json.dumps(old, ensure_ascii=False), encoding="utf-8")
+    cost = (await client.get("/api/observability/overview")).json()["cost"]
+    assert cost["present"] is False and cost["legacy"] is True
+    assert cost["rows"] == [] and "已隔离旧业务" in cost["hint"]
+
+
 async def test_trend_note_only_counts_for_the_run_it_describes(client, reports):
     """注旁挂在文件里,趋势本身在表里:注记的轮次不是最新一轮就不端,免得新数配旧注。"""
-    await repository.insert_eval_run("手动", 80, {"recall_at_10": 1.0, "mrr": 0.972,
-                                                 "faithfulness": 1.0, "refusal_rate": 1.0})
+    await repository.insert_eval_run("手动", 30, {"dataset": "logistics_retrieval_v1",
+                                                 "recall_at_5": 0.96, "mrr_at_5": 0.94,
+                                                 "ndcg_at_5": 0.93})
     latest_id = (await repository.list_eval_runs(limit=1))[0].id
 
     reports[2].write_text(json.dumps({"run_id": latest_id, "note": "四项都没退步"},

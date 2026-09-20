@@ -12,7 +12,7 @@ def order_snapshot(order_id: str) -> dict:
         "status": rng.choice(["待付款", "已付款", "已发货", "已签收"]),
         "amount": rng.randint(50, 2000),
         "created_at": f"2026-07-{rng.randint(1, 12):02d} 10:00",
-        "product": rng.choice(["智能猫砂盆", "猫粮 5kg", "猫爬架", "自动饮水机"]),
+        "product": rng.choice(["服装样品", "电子配件", "商业文件", "家居用品"]),
         "tracking_no": f"SF{rng.randint(10**11, 10**12 - 1)}",
     }
 
@@ -26,8 +26,7 @@ def owns_order(user_id: str, order_id: str) -> bool:
     return any(o["order_id"] == order_id for o in list_user_orders(user_id))
 
 
-# 课程演示单。文档、curl 例子、各章验收脚本里到处写着 1001 和 2002,让每个账号名下都有
-# 这两笔,例子拿来即跑。想看归属校验拦人,随便报一个别的号(如 9999)就会被挡下。
+# 兼容历史订单子流程的演示单。当前产品主链路以跨境运单为核心。
 DEMO_ORDER_IDS = ("1001", "2002")
 
 

@@ -48,11 +48,14 @@ JOBS: dict[str, JobSpec] = {
         # ch04 检索质量:四策略对照评估(检索段确定性 + 生成段过 LLM 裁判)
         JobSpec("eval-rag", "RAG 评估(四策略对照)", ("make", "eval-rag"),
                 "需 Milvus + 已建库 + 聊天上游,分钟级", heavy=True),
+        JobSpec("eval-logistics-retrieval", "物流传统检索指标",
+                ("make", "eval-logistics-retrieval"),
+                "需 Milvus + 已建库 + 嵌入/重排上游,分钟级", heavy=True),
         # ch09 观测与成本:意图成本账、评估趋势、置信度阈值校准
         JobSpec("cost-report", "意图成本账", ("make", "cost-report"),
                 "需 Langfuse 在跑且窗口内有 trace"),
-        JobSpec("eval-flywheel", "评估流水线(落一轮趋势)", ("make", "eval-flywheel"),
-                "需 mysql + Milvus + 聊天上游,分钟级", heavy=True),
+        JobSpec("eval-flywheel", "物流检索评估(落一轮趋势)", ("make", "eval-flywheel"),
+                "需 mysql + Milvus + 嵌入/重排上游；30 条物流题，分钟级", heavy=True),
         JobSpec("calibrate-confidence", "置信度阈值校准", ("make", "calibrate-confidence"),
                 "需 Milvus + 已建库 + 重排上游,分钟级", heavy=True),
         # ch10 分类器

@@ -5,7 +5,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>喵喵优选 · 类目问题列表</title>
+  <title>航迹云 · 主题问题列表</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'><rect x='2' y='2' width='4' height='4' fill='%232b2632'/><rect x='10' y='2' width='4' height='4' fill='%232b2632'/><rect x='2' y='4' width='12' height='9' fill='%232b2632'/><rect x='3' y='3' width='2' height='3' fill='%23ff9f57'/><rect x='11' y='3' width='2' height='3' fill='%23ff9f57'/><rect x='3' y='5' width='10' height='7' fill='%23ff9f57'/><rect x='5' y='7' width='1' height='2' fill='%232b2632'/><rect x='10' y='7' width='1' height='2' fill='%232b2632'/><rect x='7' y='9' width='2' height='1' fill='%23ff8095'/></svg>" />
   <link rel="stylesheet" href="/static/acceptance.css" />
   <style>
@@ -46,7 +46,7 @@
   <div class="wrap">
     <div class="topbar">
       <h1 id="title">类目问题列表</h1>
-      <span class="sub" id="sub">分类器归到这一类的问题,分页看全</span>
+      <span class="sub" id="sub">主题识别归到这一类的问题，可分页查看</span>
       <span class="spacer"></span>
       <a class="btn" href="/topics">← 回主题分布</a>
       <button class="btn" id="refreshBtn">刷新</button>
@@ -157,7 +157,7 @@
       try {
         const d = await api("/api/topics/questions?label=" + encodeURIComponent(label)
           + "&page=" + curPage() + "&size=" + SIZE);
-        $("sub").textContent = "分类器归到「" + label + "」的问题,共 " + d.total + " 条";
+        $("sub").textContent = "主题识别归到「" + label + "」的问题，共 " + d.total + " 条";
         body.innerHTML = "";
         if (!d.total) {
           body.appendChild(missingBox("这一类还没有归类到的问题。换个类目,或先跑一次旁路批量归类。"));
@@ -168,7 +168,7 @@
         h.appendChild(el("span", "pill info", d.total + " 条 · 第 " + d.page + "/" + d.pages + " 页"));
         p.appendChild(h);
         p.appendChild(el("p", "lede",
-          "列的是分类器归到这一类的问题,多标签的问题会同时出现在它命中的每个类目下。"
+          "这里展示主题识别命中的问题；一个问题涉及多个物流主题时会出现在多个类目中。"
           + "问法取归并阶段产出的标准化问句,原话在下面一行。"));
         for (const it of d.items) p.appendChild(qrow(it, label));
         p.appendChild(pager(d));
