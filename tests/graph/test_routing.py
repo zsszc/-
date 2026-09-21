@@ -32,6 +32,12 @@ def test_route_by_intent_unknown_defaults_business():
     assert route_by_intent({}) == "business"
 
 
+def test_account_scope_faq_goes_to_knowledge_not_tracking_tool():
+    assert route_by_intent({"intent": "运单查询", "resolved_query": "登录后能查看哪些运单，请按步骤说明"}) == "knowledge"
+    assert route_by_intent({"intent": "其他", "resolved_query": "登录后查看运单的权限范围是什么"}) == "knowledge"
+    assert route_by_intent({"intent": "运单查询", "resolved_query": "查询运单号 SF123456789 的状态"}) == "business"
+
+
 @pytest.mark.parametrize("query", [
     "锂电池可以寄到美国吗", "汽油能不能走国际快递",
     "粉末类物品能否寄运", "锂电池走特快到美国，费用和禁寄风险分别是什么",

@@ -29,6 +29,10 @@ _ITEM_PRECHECK_TERMS = (
 
 def intent_route(intent: str, query: str = "") -> str:
     """明确物品寄运预检走工具；一般禁限寄政策仍走知识证据闸。"""
+    # “登录后能查看哪些运单”问的是演示系统的权限说明，不是查询某个单号。
+    # 意图模型容易把“运单”误判成运单查询，故只对这一窄问法强制走有引用的知识路。
+    if "运单" in query and "登录" in query and ("哪些" in query or "权限" in query or "范围" in query):
+        return "knowledge"
     if intent == "禁限寄" and any(term in query for term in _ITEM_PRECHECK_TERMS):
         return "business"
     return INTENT_TO_ROUTE.get(intent, "business")

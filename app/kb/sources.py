@@ -15,6 +15,7 @@ SOURCE_TYPES: dict[str, str] = {
     "shipping-fees.md": "spec",
     "prohibited-items.md": "policy",
     "claims-policy.md": "policy",
+    "service-playbook.md": "manual",
 }
 
 # 录入页允许选的内容类型:政策/手册这类没有天然问题,questions 落章节标题
